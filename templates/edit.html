@@ -1,0 +1,18 @@
+<h1>Edit Document</h1>
+
+{% if error %}
+    <p style="color:red;">{{ error }}</p>
+{% endif %}
+
+<form method="POST">
+    <label>Title:</label><br>
+    <input type="text" name="title" value="{{ doc[1] }}"><br><br>
+
+    <label>Expiry Date:</label><br>
+    <input type="date" name="expiry_date" value="{{ doc[2] }}"><br><br>
+
+    <button type="submit">Update</button>
+</form>
+
+<br>
+<a href="/">Back</a>

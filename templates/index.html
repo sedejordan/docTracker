@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Documents</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h2>Documents</h2>
+        <a href="/add" class="btn">+ Add Document</a>
+    </div>
+
+    <br><br>
+
+    <div>
+        <form method="GET" action="/">
+            <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q', '') }}">
+
+            <select name="status">
+                <option value="">All</option>
+                <option value="Safe" {% if request.args.get('status') == 'Safe' %}selected{% endif %}>Safe</option>
+                <option value="Good" {% if request.args.get('status') == 'Good' %}selected{% endif %}>Good</option>
+                <option value="Warning" {% if request.args.get('status') == 'Warning' %}selected{% endif %}>Warning</option>
+                <option value="Urgent" {% if request.args.get('status') == 'Urgent' %}selected{% endif %}>Urgent</option>
+                <option value="Expired" {% if request.args.get('status') == 'Expired' %}selected{% endif %}>Expired</option>
+            </select>
+
+            <button type="submit">Filter</button>
+        </form>
+    </div>
+    
+    <br>
+
+    {% if documents %}
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Expiry Date</th>
+            <th>Time Left</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+        {% for doc in documents %}
+        <tr>
+            <td>{{ doc.title }}</td>
+            <td>{{ doc.expiry_date }}</td>
+            <td>{{ doc.display_days }}</td>
+
+            <td>
+                <span class="badge {{doc.color}}">
+                    {{ doc.icon }} {{ doc.status}}
+                </span>
+            </td>
+
+            <td>
+                <a href="/edit/{{ doc.id }}" class="edit">Edit</a>
+                <a href="/delete/{{ doc.id }}" class="delete" onclick="return confirm('Delete this document?')">
+                    Delete
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No documents found.</p>
+    {% endif %}
+
+</body>
+</html>

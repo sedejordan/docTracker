@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Add Document</title>
+  </head>
+  <body>
+    <h2>Add Document</h2>
+
+    {% if error %}
+      <p style="color:red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+      <label>Title:</label><br />
+      <input type="text" name="title" /><br /><br />
+
+      <label>Expiry Date:</label><br />
+      <input type="date" name="expiry_date" /><br /><br />
+
+      <button type="submit">Add</button>
+    </form>
+
+    <br />
+    <a href="/">Back</a>
+  </body>
+</html>
