@@ -1,14 +1,20 @@
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, session
+import os
 import sqlite3
 
 app = Flask(__name__)
-app.secret_key = "secretkey"
+app.secret_key = os.environ.get("SECRET_KEY")
+APP_PASSWORD = os.environ.get("APP_PASSWORD")
 
-APP_PASSWORD = "Password123"
+print("APP_PASSWORD:", repr(APP_PASSWORD))
+print("ALL ENV:", dict(os.environ))
+
+
+DB_PATH = os.path.join(os.getcwd(), "documents.db")
 
 def get_db():
-    conn = sqlite3.connect("documents.db")
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
