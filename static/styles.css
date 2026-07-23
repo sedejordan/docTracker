@@ -20,18 +20,31 @@ body {
     margin-bottom: 20px;
 }
 
-.actions .btn {
+.btn {
     margin-left: 10px;
     text-decoration: none;
-    padding: 6px 10px;
+    padding: 6px 12px;
     border-radius: 6px;
-    background: #eee;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.primary {
+    background-color: #007bff;
     color: white;
 }
 
-.actions .logout {
+.primary:hover {
+    background: #0056b3;
+}
+
+.logout {
     background: #ffdddd;
     color: #a00;
+}
+
+.logout:hover {
+    background: #ffcccc;
 }
 
 table {
