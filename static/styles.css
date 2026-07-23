@@ -17,14 +17,21 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 20px;
 }
 
-.btn {
-    background: #007bff;
-    color: white;
-    padding: 8px 12px;
+.actions .btn {
+    margin-left: 10px;
     text-decoration: none;
-    border-radius: 5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #eee;
+    color: white;
+}
+
+.actions .logout {
+    background: #ffdddd;
+    color: #a00;
 }
 
 table {
