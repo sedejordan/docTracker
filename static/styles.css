@@ -225,3 +225,70 @@ a {
         white-space: nowrap;
     }
 }
+
+/* Add Form */
+.form-container {
+    max-width: 480px;
+}
+
+.page-title {
+    color: var(--text-dark);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.alert-error {
+    background-color: #ffe9e9;
+    color: #c0392b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid #ffcccc;
+    font-size: 14px;
+    margin-bottom: 18px;
+}
+
+.doc-form .form-group {
+    margin-bottom: 18px;
+}
+
+.doc-form label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-dark);
+}
+
+.doc-form input[type="text"],
+.doc-form input[type="date"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.doc-form input[type="text"]:focus,
+.doc-form input[type="date"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.btn-secondary {
+    background-color: #f1f2f6;
+    color: var(--text-dark);
+}
+
+.btn-secondary:hover {
+    background-color: #e4e6eb;
+}
