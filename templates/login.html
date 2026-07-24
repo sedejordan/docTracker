@@ -1,10 +1,33 @@
-<h2>Login</h2>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DocTracker</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/doctracker.css">
+  </head>
+  <body class="login-page">
+    <div class="login-card">
 
-<form method="POST">
-    <input type="password" name="password" placeholder="Enter password">
-    <button type="submit">Login</button>
-</form>
+      <h1 class="logo login-logo">DocTracker</h1>
+      <h2 class="page-title login-title">Login</h2>
 
-{% if error %}
-<p style="color:red;">{{ error }}</p>
-{% endif %}
+      {% if error %}
+        <div class="alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" class="doc-form">
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter password">
+        </div>
+
+        <div class="form-actions login-actions">
+          <button type="submit" class="btn primary login-btn">Login</button>
+        </div>
+      </form>
+
+    </div>
+  </body>
+</html>
