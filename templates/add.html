@@ -20,7 +20,7 @@
         <div class="alert-error">{{ error }}</div>
       {% endif %}
 
-      <form method="POST" class="doc-form">
+      <form method="POST" class="doc-form" enctype="multipart/form-data">
         <div class="form-group">
           <label for="title">Title</label>
           <input type="text" id="title" name="title" placeholder="e.g. Passport, License, Contract" />
@@ -29,6 +29,11 @@
         <div class="form-group">
           <label for="expiry_date">Expiry Date</label>
           <input type="date" id="expiry_date" name="expiry_date" />
+        </div>
+
+        <div class="form-group">
+          <label for="document_file">Document file (optional)</label>
+          <input type="file" id="document_file" name="document_file" accept=".pdf,.png,.jpg,.jpeg,.docx,.doc,.txt" />
         </div>
 
         <div class="form-actions">

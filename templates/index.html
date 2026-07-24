@@ -15,7 +15,7 @@
 
         <div class="actions">
             <a href="/add" class="btn btn-primary">+ Add Document</a>
-            {% if session.get("logged_in") %}
+            {% if session.get("user_id") %}
                 <a href="/logout" class="btn btn-outline-secondary ms-2">Logout</a>
             {% endif %}
         </div>
@@ -61,7 +61,12 @@
                 <tbody>
                     {% for doc in documents %}
                     <tr>
-                        <td>{{ doc.title }}</td>
+                        <td>
+                            {{ doc.title }}
+                            {% if doc.has_file %}
+                                <a href="/view/{{ doc.id }}" target="_blank" title="View uploaded document">📎</a>
+                            {% endif %}
+                        </td>
                         <td>{{ doc.expiry_date }}</td>
                         <td>{{ doc.display_days }}</td>
 
