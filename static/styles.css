@@ -13,7 +13,14 @@ body {
     border-radius: 8px;
 }
 
-.header {
+.logo {
+    font-size: 28px;
+    font-weight: 700;
+    color: #007bff;
+    letter-spacing: 1px;
+}
+
+.top-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;

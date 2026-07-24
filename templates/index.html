@@ -5,10 +5,10 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="header">
-        <h2>Documents</h2>
+    <div class="top-bar">
+        <h1>DocTracker</h1>
 
-        <div>
+        <div class="actions">
             <a href="/add" class="btn primary">+ Add Document</a>
             {% if session.get("logged_in") %}
                 <a href="/logout" class="btn logout">Logout</a>
