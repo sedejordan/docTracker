@@ -33,8 +33,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # from werkzeug.utils import secure_filename
 import os
 import secrets
-import smtplib
-from email.message import EmailMessage
+import requests
 import psycopg2
 
 from database import init_db
@@ -46,13 +45,15 @@ app.secret_key = os.environ.get("SECRET_KEY")
 # created and linked to this web service. See README for local setup.
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Gmail SMTP sends the password reset emails. GMAIL_ADDRESS is the Gmail
-# account sending the email. GMAIL_APP_PASSWORD is NOT your normal Gmail
-# password - it's a 16-character app password generated under Google
-# Account > Security > App Passwords (requires 2-Step Verification to be
-# turned on first).
-GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+# Resend sends the password reset emails over its HTTPS API. We use this
+# instead of SMTP because Render blocks outbound SMTP ports (465/587) on
+# its free tier - HTTPS (port 443) isn't blocked, so an API-based email
+# provider is the reliable option here.
+# RESEND_API_KEY comes from resend.com (API Keys section).
+# RESEND_FROM_EMAIL must be "onboarding@resend.dev" until you verify your
+# own domain with Resend - after that, use an address on your domain.
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
 
 # How long a password reset link stays valid before the user has to
 # request a new one.
@@ -127,34 +128,30 @@ def get_user_by_reset_token(token):
 
 def send_password_reset_email(to_email, reset_link):
     """
-    Emails a password reset link via Gmail SMTP. Any failure (wrong app
-    password, Gmail outage, etc.) is caught and logged rather than
-    crashing the request - the caller shows the same generic "check your
-    email" message either way, so we don't reveal whether sending worked.
+    Emails a password reset link via Resend's HTTPS API. Any failure (bad
+    API key, Resend outage, unverified recipient, etc.) is caught and
+    logged rather than crashing the request - the caller shows the same
+    generic "check your email" message either way, so we don't reveal
+    whether sending worked.
     """
-    message = EmailMessage()
-    message["Subject"] = "Reset your DocTracker password"
-    message["From"] = GMAIL_ADDRESS
-    message["To"] = to_email
-    message.set_content(
-        f"We received a request to reset your DocTracker password.\n\n"
-        f"Reset your password here: {reset_link}\n\n"
-        f"This link expires in 1 hour. If you didn't request this, you can ignore this email."
-    )
-    message.add_alternative(
-        f"""
-            <p>We received a request to reset your DocTracker password.</p>
-            <p><a href="{reset_link}">Click here to choose a new password</a></p>
-            <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
-        """,
-        subtype="html"
-    )
-
     try:
-        # Gmail's SMTP server, over an encrypted (SSL) connection on port 465.
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
-            smtp.send_message(message)
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={
+                "from": RESEND_FROM_EMAIL,
+                "to": [to_email],
+                "subject": "Reset your DocTracker password",
+                "html": f"""
+                    <p>We received a request to reset your DocTracker password.</p>
+                    <p><a href="{reset_link}">Click here to choose a new password</a></p>
+                    <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+                """
+            },
+            timeout=10
+        )
+        if response.status_code >= 400:
+            print(f"Warning: Resend returned an error sending password reset email: {response.text}")
     except Exception as e:
         print(f"Warning: failed to send password reset email: {e}")
 
