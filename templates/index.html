@@ -63,9 +63,11 @@
                     <tr>
                         <td>
                             {{ doc.title }}
+                            {# FILE UPLOAD FEATURE: DISABLED FOR MVP
                             {% if doc.has_file %}
                                 <a href="/view/{{ doc.id }}" target="_blank" title="View uploaded document">📎</a>
                             {% endif %}
+                            #}
                         </td>
                         <td>{{ doc.expiry_date }}</td>
                         <td>{{ doc.display_days }}</td>
