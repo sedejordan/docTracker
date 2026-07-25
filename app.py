@@ -20,7 +20,7 @@ not deleted, so it can be switched back on once there's persistent
 file storage in place (e.g. S3, Supabase Storage, or a Render disk).
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import (
     Flask, render_template, request, redirect, session,
     url_for, abort
@@ -32,6 +32,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # Re-add this import when file uploads are re-enabled:
 # from werkzeug.utils import secure_filename
 import os
+import secrets
+import smtplib
+from email.message import EmailMessage
 import psycopg2
 
 from database import init_db
@@ -42,6 +45,18 @@ app.secret_key = os.environ.get("SECRET_KEY")
 # Render provides this automatically once a PostgreSQL database is
 # created and linked to this web service. See README for local setup.
 DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# Gmail SMTP sends the password reset emails. GMAIL_ADDRESS is the Gmail
+# account sending the email. GMAIL_APP_PASSWORD is NOT your normal Gmail
+# password - it's a 16-character app password generated under Google
+# Account > Security > App Passwords (requires 2-Step Verification to be
+# turned on first).
+GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+
+# How long a password reset link stays valid before the user has to
+# request a new one.
+RESET_TOKEN_LIFETIME = timedelta(hours=1)
 
 # Creates the users/documents tables if they don't exist yet. This runs
 # every time the app starts (e.g. every deploy), which is safe because
@@ -66,6 +81,82 @@ except Exception as e:
 def get_db():
     """Opens a new PostgreSQL connection. Callers are responsible for closing it."""
     return psycopg2.connect(DATABASE_URL)
+
+
+def get_user_by_email(email):
+    """Returns (id, email, password_hash) for this email, or None if no account exists."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email, password_hash FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        cursor.close()
+    finally:
+        conn.close()
+    return user
+
+
+def get_user_by_reset_token(token):
+    """
+    Returns (id, email, reset_token_expiry) for a valid, unexpired reset
+    token, or None if the token doesn't exist or has expired. Used by the
+    reset-password page to check a link is still good before letting
+    someone set a new password.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, email, reset_token_expiry FROM users WHERE reset_token = %s",
+            (token,)
+        )
+        user = cursor.fetchone()
+        cursor.close()
+    finally:
+        conn.close()
+
+    if user is None:
+        return None
+
+    user_id, email, expiry = user
+    if expiry is None or datetime.utcnow() > expiry:
+        return None
+
+    return user
+
+
+def send_password_reset_email(to_email, reset_link):
+    """
+    Emails a password reset link via Gmail SMTP. Any failure (wrong app
+    password, Gmail outage, etc.) is caught and logged rather than
+    crashing the request - the caller shows the same generic "check your
+    email" message either way, so we don't reveal whether sending worked.
+    """
+    message = EmailMessage()
+    message["Subject"] = "Reset your DocTracker password"
+    message["From"] = GMAIL_ADDRESS
+    message["To"] = to_email
+    message.set_content(
+        f"We received a request to reset your DocTracker password.\n\n"
+        f"Reset your password here: {reset_link}\n\n"
+        f"This link expires in 1 hour. If you didn't request this, you can ignore this email."
+    )
+    message.add_alternative(
+        f"""
+            <p>We received a request to reset your DocTracker password.</p>
+            <p><a href="{reset_link}">Click here to choose a new password</a></p>
+            <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+        """,
+        subtype="html"
+    )
+
+    try:
+        # Gmail's SMTP server, over an encrypted (SSL) connection on port 465.
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+            smtp.send_message(message)
+    except Exception as e:
+        print(f"Warning: failed to send password reset email: {e}")
 
 
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP (see note above) ---
@@ -392,6 +483,121 @@ def login():
             error = "Invalid email or password"
 
     return render_template("login.html", error=error)
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    message = None
+
+    if request.method == "POST":
+        email = request.form["email"].strip().lower()
+        user = get_user_by_email(email)
+
+        if user:
+            user_id = user[0]
+            token = secrets.token_urlsafe(32)
+            expiry = datetime.utcnow() + RESET_TOKEN_LIFETIME
+
+            conn = get_db()
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE users SET reset_token = %s, reset_token_expiry = %s WHERE id = %s",
+                    (token, expiry, user_id)
+                )
+                conn.commit()
+                cursor.close()
+            finally:
+                conn.close()
+
+            reset_link = url_for("reset_password", token=token, _external=True)
+            send_password_reset_email(email, reset_link)
+
+        # Same message whether or not the email is registered - this stops
+        # this form being used to check which emails have an account here.
+        message = "If an account exists for that email, we've sent a password reset link."
+
+    return render_template("forgot_password.html", message=message)
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    user = get_user_by_reset_token(token)
+
+    if not user:
+        return render_template("reset_password.html", invalid=True)
+
+    user_id = user[0]
+    error = None
+
+    if request.method == "POST":
+        password = request.form["password"]
+        confirm_password = request.form["confirm_password"]
+
+        if len(password) < 8:
+            error = "Password must be at least 8 characters"
+        elif password != confirm_password:
+            error = "Passwords don't match"
+        else:
+            password_hash = generate_password_hash(password)
+            conn = get_db()
+            try:
+                cursor = conn.cursor()
+                # Clear the token so this link can't be reused after it's
+                # already been used once to set a new password.
+                cursor.execute(
+                    "UPDATE users SET password_hash = %s, reset_token = NULL, reset_token_expiry = NULL WHERE id = %s",
+                    (password_hash, user_id)
+                )
+                conn.commit()
+                cursor.close()
+            finally:
+                conn.close()
+            return redirect(url_for("login"))
+
+    return render_template("reset_password.html", invalid=False, error=error)
+
+
+@app.route("/change-password", methods=["GET", "POST"])
+def change_password():
+    auth = require_login()
+    if auth:
+        return auth
+
+    error = None
+    success = None
+
+    if request.method == "POST":
+        current_password = request.form["current_password"]
+        new_password = request.form["new_password"]
+        confirm_password = request.form["confirm_password"]
+
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT password_hash FROM users WHERE id = %s", (session["user_id"],))
+            current_hash = cursor.fetchone()[0]
+
+            if not check_password_hash(current_hash, current_password):
+                error = "Current password is incorrect"
+            elif len(new_password) < 8:
+                error = "New password must be at least 8 characters"
+            elif new_password != confirm_password:
+                error = "New passwords don't match"
+            else:
+                new_hash = generate_password_hash(new_password)
+                cursor.execute(
+                    "UPDATE users SET password_hash = %s WHERE id = %s",
+                    (new_hash, session["user_id"])
+                )
+                conn.commit()
+                success = "Password updated."
+
+            cursor.close()
+        finally:
+            conn.close()
+
+    return render_template("change_password.html", error=error, success=success)
 
 
 @app.route("/logout")

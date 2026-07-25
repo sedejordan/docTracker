@@ -49,6 +49,14 @@ def init_db():
         );
     """)
 
+    # Added for password reset: a one-time token emailed to the user, and
+    # when it expires. ADD COLUMN IF NOT EXISTS is safe to run repeatedly -
+    # it does nothing if the column is already there. This runs every time
+    # the app starts (see app.py), so existing users tables get these new
+    # columns automatically without needing manual/shell access.
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP;")
+
     # file_path column intentionally omitted - the file upload feature
     # is disabled for the MVP. See app.py for matching notes on where
     # to re-add it later.

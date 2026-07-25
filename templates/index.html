@@ -16,6 +16,7 @@
         <div class="actions">
             <a href="/add" class="btn btn-primary">+ Add Document</a>
             {% if session.get("user_id") %}
+                <a href="/change-password" class="btn btn-outline-secondary ms-2">Change Password</a>
                 <a href="/logout" class="btn btn-outline-secondary ms-2">Logout</a>
             {% endif %}
         </div>
