@@ -34,12 +34,24 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import psycopg2
 
+from database import init_db
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
 
 # Render provides this automatically once a PostgreSQL database is
 # created and linked to this web service. See README for local setup.
 DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# Creates the users/documents tables if they don't exist yet. This runs
+# every time the app starts (e.g. every deploy), which is safe because
+# CREATE TABLE IF NOT EXISTS does nothing if the tables are already there.
+# This means we never need shell/terminal access to run database.py by
+# hand - useful since Shell access is a paid Render feature.
+try:
+    init_db()
+except Exception as e:
+    print(f"Warning: could not initialize database tables on startup: {e}")
 
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP ---
 # Uploaded files were being stored on Render's local disk, which is wiped
