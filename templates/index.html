@@ -81,9 +81,11 @@
 
                         <td class="text-end pe-3">
                             <a href="/edit/{{ doc.id }}" class="edit btn btn-sm btn-info">Edit</a>
-                            <a href="/delete/{{ doc.id }}" class="delete btn btn-sm btn-danger" onclick="return confirm('Delete this document?')">
-                                Delete
-                            </a>
+                            <form method="POST" action="/delete/{{ doc.id }}" class="d-inline"
+                                  onsubmit="return confirm('Delete this document?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="delete btn btn-sm btn-danger">Delete</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}

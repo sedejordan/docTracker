@@ -21,14 +21,19 @@
       {% endif %}
 
       <form method="POST" class="doc-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
           <label for="title">Title</label>
-          <input type="text" id="title" name="title" value="{{ doc[1] }}">
+          <!-- doc.title / doc.expiry_date, not doc[1] / doc[2] - get_owned_document()
+               returns a dictionary (see app.py), so attribute-style access is what
+               actually reads the right values. The old doc[1]/doc[2] silently
+               rendered blank fields instead of erroring. -->
+          <input type="text" id="title" name="title" value="{{ doc.title }}" autofocus>
         </div>
 
         <div class="form-group">
           <label for="expiry_date">Expiry Date</label>
-          <input type="date" id="expiry_date" name="expiry_date" value="{{ doc[2] }}">
+          <input type="date" id="expiry_date" name="expiry_date" value="{{ doc.expiry_date }}">
         </div>
 
         <div class="form-actions">

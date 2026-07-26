@@ -23,6 +23,7 @@
       <!-- enctype="multipart/form-data" is only needed for file uploads.
            Add it back to the <form> tag above when uploads are re-enabled. -->
       <form method="POST" class="doc-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
           <label for="title">Title</label>
           <input type="text" id="title" name="title" placeholder="e.g. Passport, License, Contract" />

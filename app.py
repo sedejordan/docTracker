@@ -35,11 +35,56 @@ import os
 import secrets
 import requests
 import psycopg2
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from database import init_db
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
+
+# --- SECURE COOKIE SETTINGS ---
+# SESSION_COOKIE_SECURE: only send the login cookie over HTTPS, never plain
+# HTTP. Render serves your site over HTTPS by default, so this is safe -
+# but it does mean sessions/login won't work if you ever run this locally
+# over plain http://localhost without HTTPS.
+# SESSION_COOKIE_HTTPONLY: stops JavaScript from reading the cookie, so a
+# malicious script (e.g. from a compromised third-party library) can't
+# steal a logged-in user's session.
+# SESSION_COOKIE_SAMESITE="Lax": stops the cookie being sent along with
+# requests that originate from other websites, which is most of what
+# CSRF protection (below) defends against.
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
+
+# --- CSRF PROTECTION ---
+# Cross-Site Request Forgery: without this, a malicious website could embed
+# a hidden form that submits to e.g. /delete/3 on YOUR site, and if a
+# logged-in user visits that malicious page, the browser happily attaches
+# their DocTracker login cookie and the delete goes through - without them
+# ever intending it. CSRFProtect requires every POST form to include a
+# secret, single-use token (added via {{ csrf_token() }} in each template)
+# that a third-party site has no way of knowing, so forged requests get
+# rejected automatically.
+csrf = CSRFProtect(app)
+
+# --- RATE LIMITING ---
+# Without this, nothing stops someone from scripting thousands of login
+# attempts per second to brute-force a password, or hammering
+# /forgot-password to spam someone's inbox. get_remote_address limits by
+# IP address. Storage is in-memory, which is fine as long as this app runs
+# as a single worker process (Render's free tier defaults to
+# WEB_CONCURRENCY=1) - with multiple workers/instances, each would track
+# its own separate counts, so you'd want a shared store like Redis instead.
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 # Render provides this automatically once a PostgreSQL database is
 # created and linked to this web service. See README for local setup.
@@ -331,7 +376,7 @@ def add_document():
     return render_template("add.html", error=error)
 
 
-@app.route("/delete/<int:doc_id>")
+@app.route("/delete/<int:doc_id>", methods=["POST"])
 def delete_document(doc_id):
     auth = require_login()
     if auth:
@@ -416,6 +461,7 @@ def edit_document(doc_id):
 
 
 @app.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per hour")
 def register():
     error = None
     if request.method == "POST":
@@ -456,6 +502,7 @@ def register():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def login():
     error = None
 
@@ -483,6 +530,7 @@ def login():
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per hour")
 def forgot_password():
     message = None
 
@@ -518,6 +566,7 @@ def forgot_password():
 
 
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
+@limiter.limit("15 per hour")
 def reset_password(token):
     user = get_user_by_reset_token(token)
 
