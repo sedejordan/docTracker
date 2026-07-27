@@ -653,6 +653,45 @@ def change_password():
     return render_template("change_password.html", error=error, success=success)
 
 
+@app.route("/delete-account", methods=["GET", "POST"])
+def delete_account():
+    auth = require_login()
+    if auth:
+        return auth
+
+    error = None
+
+    if request.method == "POST":
+        password = request.form["password"]
+
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT password_hash FROM users WHERE id = %s", (session["user_id"],))
+            current_hash = cursor.fetchone()[0]
+
+            if not check_password_hash(current_hash, password):
+                error = "Incorrect password"
+            else:
+                # The documents table doesn't automatically cascade-delete
+                # when a user is removed (no ON DELETE CASCADE on the
+                # foreign key), so documents have to be deleted first -
+                # otherwise this would fail with a foreign key error.
+                cursor.execute("DELETE FROM documents WHERE user_id = %s", (session["user_id"],))
+                cursor.execute("DELETE FROM users WHERE id = %s", (session["user_id"],))
+                conn.commit()
+
+            cursor.close()
+        finally:
+            conn.close()
+
+        if not error:
+            session.clear()
+            return redirect(url_for("login"))
+
+    return render_template("delete_account.html", error=error)
+
+
 @app.route("/logout")
 def logout():
     session.clear()

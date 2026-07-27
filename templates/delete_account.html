@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Account - DocTracker</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/doctracker.css">
+  </head>
+  <body>
+    <div class="container form-container">
+
+      <div class="top-bar">
+        <h1 class="logo">DocTracker</h1>
+      </div>
+
+      <h2 class="page-title">Delete Account</h2>
+
+      <div class="alert-error">
+        This permanently deletes your account and every document you've added.
+        This cannot be undone.
+      </div>
+
+      {% if error %}
+        <div class="alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" class="doc-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label for="password">Enter your password to confirm</label>
+          <input type="password" id="password" name="password" autofocus required>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-danger">Permanently Delete My Account</button>
+          <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+
+    </div>
+  </body>
+</html>
