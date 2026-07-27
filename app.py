@@ -83,7 +83,14 @@ csrf = CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["200 per day", "50 per hour"],
+    # Flask-Limiter decides whether it's enabled right here, at
+    # construction time - NOT dynamically per request. Setting
+    # app.config["RATELIMIT_ENABLED"] later (e.g. in tests) has no effect,
+    # since by then this has already been locked in. DISABLE_RATE_LIMITING
+    # lets tests turn this off before app.py is even imported - see
+    # tests/conftest.py.
+    enabled=os.environ.get("DISABLE_RATE_LIMITING", "false").lower() != "true"
 )
 
 # Render provides this automatically once a PostgreSQL database is
