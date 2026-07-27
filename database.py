@@ -1,7 +1,7 @@
 """
 database.py
 
-Sets up the database tables for DocTracker.
+Sets up the database tables for Fritt Tracker.
 
 This project used to use SQLite (a database stored in a single file on
 disk). We've switched to PostgreSQL because SQLite's file gets wiped

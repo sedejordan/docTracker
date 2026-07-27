@@ -1,47 +1,34 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - DocTracker</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <link rel="stylesheet" href="/static/doctracker.css">
-  </head>
-  <body class="login-page">
-    <div class="login-card">
+{% extends "base.html" %}
+{% block title %}Login - Fritt Tracker{% endblock %}
+{% block content %}
+<div class="max-w-sm mx-auto mt-12 bg-white border border-line rounded-xl p-8 shadow-sm">
+  <h1 class="font-display font-bold text-2xl text-center">Fritt <span class="text-fritt">Tracker</span></h1>
+  <h2 class="text-center text-muted text-sm mb-6">Log in</h2>
 
-      <h1 class="logo login-logo">DocTracker</h1>
-      <h2 class="page-title login-title">Login</h2>
+  {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2 mb-4">{{ error }}</div>
+  {% endif %}
 
-      {% if error %}
-        <div class="alert-error">{{ error }}</div>
-      {% endif %}
-
-      <form method="POST" class="doc-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" placeholder="you@example.com" required>
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Enter password" required>
-        </div>
-
-        <div class="form-actions login-actions">
-          <button type="submit" class="btn primary login-btn">Login</button>
-        </div>
-      </form>
-
-      <p class="login-footer">
-        <a href="/forgot-password">Forgot your password?</a>
-      </p>
-
-      <p class="login-footer">
-        Don't have an account? <a href="/register">Sign up</a>
-      </p>
-
+  <form method="POST" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label for="email" class="block text-sm font-medium mb-1">Email</label>
+      <input type="email" id="email" name="email" autofocus required
+             class="w-full px-3 py-2 border border-line rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-fritt focus:border-transparent">
     </div>
-  </body>
-</html>
+    <div>
+      <label for="password" class="block text-sm font-medium mb-1">Password</label>
+      <input type="password" id="password" name="password" required
+             class="w-full px-3 py-2 border border-line rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-fritt focus:border-transparent">
+    </div>
+    <button type="submit" class="w-full py-2 rounded-md bg-fritt text-white font-medium text-sm hover:bg-fritt-dark transition-colors">Log In</button>
+  </form>
+
+  <p class="text-center text-sm text-muted mt-4">
+    <a href="/forgot-password" class="text-fritt hover:underline">Forgot your password?</a>
+  </p>
+  <p class="text-center text-sm text-muted mt-2">
+    Don't have an account? <a href="/register" class="text-fritt hover:underline">Sign up</a>
+  </p>
+</div>
+{% endblock %}

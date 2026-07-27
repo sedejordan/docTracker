@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Fritt Tracker{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#14181F',
+            paper: '#F7F7F5',
+            fritt: { DEFAULT: '#2C5FEF', dark: '#1E46C4' },
+            muted: '#6B7280',
+            line: '#E4E4E1',
+          },
+          fontFamily: {
+            display: ['"Space Grotesk"', 'sans-serif'],
+            body: ['"Inter"', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-paper text-ink font-body min-h-screen">
+
+  <!-- Loading overlay: shown by loading.js on form submits and internal
+       link clicks. The grey-to-blue fill deliberately echoes the document
+       status bars elsewhere in the app - progress toward a deadline is
+       the whole subject of this product, so the loading state uses the
+       same visual idea instead of a generic spinner. -->
+  <div id="loading-overlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-paper/90 backdrop-blur-sm">
+    <div class="w-48 h-2 rounded-full bg-line overflow-hidden">
+      <div id="loading-fill" class="h-full w-0 bg-fritt transition-all duration-[1400ms] ease-out"></div>
+    </div>
+    <p class="mt-4 font-display text-sm tracking-wide text-muted">FRITT TRACKER</p>
+  </div>
+
+  {% if session.get("user_id") %}
+  <header class="bg-white border-b border-line">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <a href="/" class="font-display font-bold text-lg tracking-tight text-ink">Fritt <span class="text-fritt">Tracker</span></a>
+      <nav class="flex flex-wrap gap-2">
+        <a href="/add" class="px-3 py-1.5 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
+        <a href="/change-password" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>
+        <a href="/logout" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Logout</a>
+      </nav>
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="/static/loading.js"></script>
+</body>
+</html>

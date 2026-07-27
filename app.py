@@ -1,7 +1,7 @@
 """
 app.py
 
-Main Flask application for DocTracker.
+Main Flask application for Fritt Tracker.
 
 Each user has their own account (see the users table). Every document
 is tied to the user who created it via a user_id column, and every
@@ -65,7 +65,7 @@ app.config.update(
 # Cross-Site Request Forgery: without this, a malicious website could embed
 # a hidden form that submits to e.g. /delete/3 on YOUR site, and if a
 # logged-in user visits that malicious page, the browser happily attaches
-# their DocTracker login cookie and the delete goes through - without them
+# their Fritt Tracker login cookie and the delete goes through - without them
 # ever intending it. CSRFProtect requires every POST form to include a
 # secret, single-use token (added via {{ csrf_token() }} in each template)
 # that a third-party site has no way of knowing, so forged requests get
@@ -193,9 +193,9 @@ def send_password_reset_email(to_email, reset_link):
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": [to_email],
-                "subject": "Reset your DocTracker password",
+                "subject": "Reset your Fritt Tracker password",
                 "html": f"""
-                    <p>We received a request to reset your DocTracker password.</p>
+                    <p>We received a request to reset your Fritt Tracker password.</p>
                     <p><a href="{reset_link}">Click here to choose a new password</a></p>
                     <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
                 """

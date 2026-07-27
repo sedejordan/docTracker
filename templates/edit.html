@@ -1,47 +1,32 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Document - DocTracker</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <link rel="stylesheet" href="/static/doctracker.css">
-  </head>
-  <body>
-    <div class="container form-container">
+{% extends "base.html" %}
+{% block title %}Edit Document - Fritt Tracker{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white border border-line rounded-xl p-8 shadow-sm">
+  <h2 class="font-display font-bold text-xl mb-6">Edit Document</h2>
 
-      <div class="top-bar">
-        <h1 class="logo">DocTracker</h1>
-      </div>
+  {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2 mb-4">{{ error }}</div>
+  {% endif %}
 
-      <h2 class="page-title">Edit Document</h2>
-
-      {% if error %}
-        <div class="alert-error">{{ error }}</div>
-      {% endif %}
-
-      <form method="POST" class="doc-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-          <label for="title">Title</label>
-          <!-- doc.title / doc.expiry_date, not doc[1] / doc[2] - get_owned_document()
-               returns a dictionary (see app.py), so attribute-style access is what
-               actually reads the right values. The old doc[1]/doc[2] silently
-               rendered blank fields instead of erroring. -->
-          <input type="text" id="title" name="title" value="{{ doc.title }}" autofocus>
-        </div>
-
-        <div class="form-group">
-          <label for="expiry_date">Expiry Date</label>
-          <input type="date" id="expiry_date" name="expiry_date" value="{{ doc.expiry_date }}">
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" class="btn primary">Update Document</button>
-          <a href="/" class="btn btn-secondary">Cancel</a>
-        </div>
-      </form>
-
+  <form method="POST" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label for="title" class="block text-sm font-medium mb-1">Title</label>
+      <!-- doc.title / doc.expiry_date - get_owned_document() returns a
+           dictionary (see app.py), so attribute-style access reads the
+           right values. -->
+      <input type="text" id="title" name="title" value="{{ doc.title }}" autofocus
+             class="w-full px-3 py-2 border border-line rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-fritt focus:border-transparent">
     </div>
-  </body>
-</html>
+    <div>
+      <label for="expiry_date" class="block text-sm font-medium mb-1">Expiry Date</label>
+      <input type="date" id="expiry_date" name="expiry_date" value="{{ doc.expiry_date }}"
+             class="w-full px-3 py-2 border border-line rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-fritt focus:border-transparent">
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" class="px-4 py-2 rounded-md bg-fritt text-white font-medium text-sm hover:bg-fritt-dark transition-colors">Update Document</button>
+      <a href="/" class="px-4 py-2 rounded-md border border-line text-sm hover:bg-paper transition-colors">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
