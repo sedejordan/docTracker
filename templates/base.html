@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Fritt Tracker{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/fritt-tracker-logo.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -32,21 +33,39 @@
 <body class="bg-paper text-ink font-body min-h-screen">
 
   <!-- Loading overlay: shown by loading.js on form submits and internal
-       link clicks. The grey-to-blue fill deliberately echoes the document
-       status bars elsewhere in the app - progress toward a deadline is
-       the whole subject of this product, so the loading state uses the
-       same visual idea instead of a generic spinner. -->
+       link clicks. This is the Fritt Tracker icon itself (document +
+       progress ring) with the ring animating from empty to full - same
+       grey-to-blue fill idea as the document status badges elsewhere in
+       the app, just circular instead of linear. Inlined directly (not
+       an <img>) so loading.js can animate the ring's stroke-dashoffset. -->
   <div id="loading-overlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-paper/90 backdrop-blur-sm">
-    <div class="w-48 h-2 rounded-full bg-line overflow-hidden">
-      <div id="loading-fill" class="h-full w-0 bg-fritt transition-all duration-[1400ms] ease-out"></div>
-    </div>
+    <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="frittGradientLoading" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#2C5FEF"/>
+          <stop offset="100%" stop-color="#22D3C9"/>
+        </linearGradient>
+      </defs>
+      <rect x="13" y="8" width="28" height="38" rx="4" fill="#FFFFFF" stroke="#14181F" stroke-width="2"/>
+      <rect x="18" y="16" width="18" height="3" rx="1.5" fill="#E4E4E1"/>
+      <rect x="18" y="23" width="18" height="3" rx="1.5" fill="#E4E4E1"/>
+      <rect x="18" y="30" width="12" height="3" rx="1.5" fill="#E4E4E1"/>
+      <circle cx="44" cy="41" r="13" fill="none" stroke="#E4E4E1" stroke-width="5"/>
+      <circle id="loading-ring" cx="44" cy="41" r="13" fill="none" stroke="url(#frittGradientLoading)"
+              stroke-width="5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="81.68"
+              transform="rotate(-90 44 41)" style="transition: stroke-dashoffset 1400ms ease-out;"/>
+      <circle cx="44" cy="41" r="2.5" fill="#2C5FEF"/>
+    </svg>
     <p class="mt-4 font-display text-sm tracking-wide text-muted">FRITT TRACKER</p>
   </div>
 
   {% if session.get("user_id") %}
   <header class="bg-white border-b border-line">
     <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <a href="/" class="font-display font-bold text-lg tracking-tight text-ink">Fritt <span class="text-fritt">Tracker</span></a>
+      <a href="/" class="flex items-center gap-2 font-display font-bold text-lg tracking-tight text-ink">
+        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8" aria-hidden="true">
+        Fritt <span class="text-fritt">Tracker</span>
+      </a>
       <nav class="flex flex-wrap gap-2">
         <a href="/add" class="px-3 py-1.5 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
         <a href="/change-password" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>

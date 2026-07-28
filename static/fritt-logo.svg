@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 56">
+  <defs>
+    <linearGradient id="frittGradientLogo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2C5FEF"/>
+      <stop offset="100%" stop-color="#22D3C9"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="4" width="48" height="48" rx="14" fill="url(#frittGradientLogo)"/>
+  <rect x="16" y="14" width="6" height="27" rx="2" fill="#FFFFFF"/>
+  <rect x="16" y="14" width="17" height="6" rx="2" fill="#FFFFFF"/>
+  <rect x="16" y="24" width="13" height="6" rx="2" fill="#FFFFFF"/>
+  <text x="62" y="39" font-family="'Space Grotesk', Arial, sans-serif" font-weight="700" font-size="34" fill="#14181F">Fritt</text>
+</svg>

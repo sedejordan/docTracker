@@ -5,16 +5,17 @@
 // any of this JS has had a chance to run.
 document.addEventListener("DOMContentLoaded", function () {
   const overlay = document.getElementById("loading-overlay");
-  const fill = document.getElementById("loading-fill");
+  const ring = document.getElementById("loading-ring");
 
   function showLoading() {
     overlay.classList.remove("hidden");
     overlay.classList.add("flex");
     // Runs on the next frame so the browser registers the starting
-    // width (0) before animating to 100 - without this the fill would
-    // just snap to full instantly instead of animating.
+    // dashoffset (81.68, i.e. empty) before animating to 0 (full) -
+    // without this the ring would just snap to full instantly instead
+    // of sweeping around.
     requestAnimationFrame(function () {
-      fill.style.width = "100%";
+      ring.style.strokeDashoffset = "0";
     });
   }
 
