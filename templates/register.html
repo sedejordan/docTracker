@@ -6,12 +6,12 @@
   <h2 class="text-center text-muted text-sm mb-6">Create account</h2>
 
   {% if error %}
-    <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2 mb-4">
-      {{ error }}
-      <span class="ml-1">
-        <a href="/login" class="text-fritt underline">Log in</a>
-      </span>
-    </div>
+  <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2 mb-4">
+    {{ error }}
+    {% if "already exists" in error %}
+      <a href="/login" class="text-fritt underline ml-1">Log in instead</a>
+    {% endif %}
+  </div>
   <form method="POST" class="space-y-4">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
