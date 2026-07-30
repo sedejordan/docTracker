@@ -79,5 +79,11 @@
   </main>
 
   <script src="/static/loading.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const first = document.querySelector("[autofocus]");
+      if (first) first.focus();
+    });
+  </script>
 </body>
 </html>

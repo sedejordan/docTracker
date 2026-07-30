@@ -29,7 +29,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.querySelectorAll('a[href^="/"]').forEach(function (link) {
     link.addEventListener("click", function (e) {
-      // Skip if the user is opening it in a new tab/window.
+      // Skip if the user is opening it in a new tab/window, or if the
+      // link's own handler already cancelled the navigation (e.g. the
+      // delete confirm() dialog was dismissed with Cancel).
+      if (e.defaultPrevented) {
+        return;
+      }
       if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
         showLoading();
       }
