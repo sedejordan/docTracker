@@ -39,7 +39,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from database import init_db
+from database import init_db, get_db
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
@@ -131,9 +131,9 @@ except Exception as e:
 # app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
-def get_db():
-    """Opens a new PostgreSQL connection. Callers are responsible for closing it."""
-    return psycopg2.connect(DATABASE_URL)
+# def get_db():
+#     """Opens a new PostgreSQL connection. Callers are responsible for closing it."""
+#     return psycopg2.connect(DATABASE_URL)
 
 
 def get_user_by_email(email):
@@ -178,7 +178,7 @@ def get_user_by_reset_token(token):
     return user
 
 
-def send_password_reset_email(to_email, reset_link):
+def send_password_reset_email(user_email, reset_link):
     """
     Emails a password reset link via Resend's HTTPS API. Any failure (bad
     API key, Resend outage, unverified recipient, etc.) is caught and
@@ -192,7 +192,7 @@ def send_password_reset_email(to_email, reset_link):
             headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
             json={
                 "from": RESEND_FROM_EMAIL,
-                "to": [to_email],
+                "to": [user_email],
                 "subject": "Reset your Fritt Tracker password",
                 "html": f"""
                     <p>We received a request to reset your Fritt Tracker password.</p>
@@ -298,6 +298,7 @@ def get_owned_document(doc_id, user_id):
 
 @app.route("/")
 def home():
+    """This is the first page the user sees after logging in"""
     auth = require_login()
     if auth:
         return auth
@@ -696,7 +697,6 @@ def delete_account():
 def logout():
     session.clear()
     return redirect("/login")
-
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/static/fritt-tracker-logo.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"> <!--i thought we already got the fonts in the previous line what's the use of this one-->
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -40,7 +40,6 @@
        an <img>) so loading.js can animate the ring's stroke-dashoffset. -->
   <div id="loading-overlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-paper/90 backdrop-blur-sm">
     <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-      <defs>
         <linearGradient id="frittGradientLoading" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#2C5FEF"/>
           <stop offset="100%" stop-color="#22D3C9"/>
@@ -63,8 +62,8 @@
   <header class="bg-white border-b border-line">
     <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <a href="/" class="flex items-center gap-1 font-display font-bold text-lg tracking-tight text-ink">
-        <img src="/static/fritt-mark.svg" alt="F" class="w-7 h-7 rounded-md">
-        <span>ritt <span class="text-fritt">Tracker</span></span>
+        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-7 h-7 rounded-md">
+        <span class="text-fritt">Fritt Tracker</span>
       </a>
       <nav class="flex flex-wrap gap-2">
         <a href="/add" class="px-3 py-1.5 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
