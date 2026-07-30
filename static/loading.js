@@ -1,3 +1,14 @@
+// Fixes the frozen loading screen
+window.addEventListener("pageshow", function (e) {
+  if (e.persisted) {
+    const overlay = document.getElementById("loading-overlay");
+    const ring = document.getElementById("loading-ring");
+    overlay.classList.add("hidden");
+    overlay.classList.remove("flex");
+    ring.style.strokeDashoffset = "81.68";
+  }
+});
+
 // Shows the branded loading overlay for anything that leaves the current
 // page: a form submit, or clicking a link to another page on this site.
 // Doesn't (and can't) cover the very first request when the page hasn't
