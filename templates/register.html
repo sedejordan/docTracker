@@ -12,6 +12,7 @@
       <a href="/login" class="text-fritt underline ml-1">Log in instead</a>
     {% endif %}
   </div>
+  {% endif %}
   <form method="POST" class="space-y-4">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
