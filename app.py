@@ -38,16 +38,26 @@ import psycopg2
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import sentry_sdk
 
 from database import init_db, get_db
 
-sentry_sdk.init(
-    dsn="https://835b607a21f464f3c4be357679d3d0dc@o4511830221062144.ingest.de.sentry.io/4511830898376784",
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    send_default_pii=True,
-)
+# --- ERROR MONITORING (Sentry) ---
+# Optional - only enabled if SENTRY_DSN environment variable is set.
+# Sentry has a free tier (5,000 errors/month).
+SENTRY_DSN = os.environ.get("SENTRY_DSN")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+    
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[FlaskIntegration()],
+        traces_sample_rate=0.1,
+        environment=os.environ.get("FLASK_ENV", "production"),
+    )
+    print("✅ Sentry error monitoring enabled")
+else:
+    print("ℹ️ Sentry not configured - set SENTRY_DSN to enable error monitoring")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
