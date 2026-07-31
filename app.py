@@ -38,8 +38,16 @@ import psycopg2
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import sentry_sdk
 
 from database import init_db, get_db
+
+sentry_sdk.init(
+    dsn="https://835b607a21f464f3c4be357679d3d0dc@o4511830221062144.ingest.de.sentry.io/4511830898376784",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
@@ -319,7 +327,7 @@ def forbidden(e):
 def method_not_allowed(e):
     """Method not allowed - e.g., GET instead of POST."""
     return render_template('errors/405.html'), 405
-
+"""
 @app.route("/")
 def home():
     """This is the first page the user sees after logging in"""
@@ -357,7 +365,12 @@ def home():
         })
 
     return render_template("index.html", documents=documents)
+"""
 
+@app.route("/")
+def hello_world():
+    1/0  # raises an error
+    return "<p>Hello, World!</p>"
 
 @app.route("/add", methods=["GET", "POST"])
 def add_document():
