@@ -738,11 +738,6 @@ def delete_account():
 def logout():
     session.clear()
     return redirect("/login")
-# temp sentry test
-@app.route("/test-sentry")
-def test_sentry():
-    # This will show up in Sentry
-    raise Exception("Test error for Sentry - check your dashboard!")
 
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your
