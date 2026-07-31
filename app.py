@@ -327,7 +327,7 @@ def forbidden(e):
 def method_not_allowed(e):
     """Method not allowed - e.g., GET instead of POST."""
     return render_template('errors/405.html'), 405
-"""
+
 @app.route("/")
 def home():
     """This is the first page the user sees after logging in"""
@@ -365,12 +365,6 @@ def home():
         })
 
     return render_template("index.html", documents=documents)
-"""
-
-@app.route("/")
-def hello_world():
-    1/0  # raises an error
-    return "<p>Hello, World!</p>"
 
 @app.route("/add", methods=["GET", "POST"])
 def add_document():
