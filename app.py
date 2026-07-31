@@ -722,6 +722,30 @@ def logout():
     session.clear()
     return redirect("/login")
 
+# temp functions to test errors
+# --- TEST ROUTES FOR ERROR PAGES ---
+# Remove these after testing!
+@app.route("/test-404")
+def test_404():
+    abort(404)
+
+@app.route("/test-403")
+def test_403():
+    abort(403)
+
+@app.route("/test-405")
+def test_405():
+    # This route only accepts POST, so GET triggers 405
+    pass
+
+@app.route("/test-405", methods=["POST"])
+def test_405_post():
+    return "POST worked"
+
+@app.route("/test-500")
+def test_500():
+    raise Exception("Test 500 error")
+
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your
     # custom error pages instead of the interactive debugger.
