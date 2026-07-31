@@ -295,6 +295,30 @@ def get_owned_document(doc_id, user_id):
 
     return {"id": doc[0], "title": doc[1], "expiry_date": doc[2], "user_id": doc[3]}
 
+# --- CUSTOM ERROR PAGES ---
+# These replace Flask's default debug/error pages with branded versions
+# that match the Fritt Tracker design system. Users see these instead of
+# raw Flask output when something goes wrong.
+
+@app.errorhandler(404)
+def page_not_found(e):
+    """Page not found - user followed a broken link or typed a wrong URL."""
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    """Internal server error - something unexpected broke in the app."""
+    return render_template('errors/500.html'), 500
+
+@app.errorhandler(403)
+def forbidden(e):
+    """Forbidden - user tried to access something they shouldn't (e.g., another user's document)."""
+    return render_template('errors/403.html'), 403
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    """Method not allowed - e.g., GET instead of POST."""
+    return render_template('errors/405.html'), 405
 
 @app.route("/")
 def home():
@@ -699,4 +723,9 @@ def logout():
     return redirect("/login")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # In production (Render), debug should be False so users see your
+    # custom error pages instead of the interactive debugger.
+    # Render sets the FLASK_DEBUG environment variable automatically
+    # based on your environment (usually False on production).
+    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
+    app.run(debug=debug_mode)

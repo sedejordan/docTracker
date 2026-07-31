@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found | Fritt Tracker{% endblock %}
+{% block content %}
+
+<div class="bg-white border border-line rounded-xl py-20 px-6 text-center">
+  <div class="max-w-md mx-auto">
+    <h1 class="text-8xl font-display font-bold text-fritt mb-4">404</h1>
+    <h2 class="text-2xl font-display font-bold text-ink mb-4">Page Not Found</h2>
+    <p class="text-muted mb-8">The document or page you're looking for doesn't exist or has been moved.</p>
+    
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <a href="/" class="px-6 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors">
+        Go Home
+      </a>
+      {% if session.get("user_id") %}
+      <a href="/add" class="px-6 py-3 rounded-md border border-line text-ink font-medium hover:bg-paper transition-colors">
+        Add Document
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

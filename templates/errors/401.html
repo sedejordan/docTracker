@@ -1,0 +1,6 @@
+@app.errorhandler(401)
+def unauthorized(e):
+    """Unauthorized - user isn't logged in but tried to access a protected page."""
+    # This will usually be caught by your require_login() redirect first,
+    # but just in case Flask's auth machinery triggers it:
+    return redirect(url_for('login'))
