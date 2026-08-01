@@ -751,6 +751,10 @@ def logout():
     session.clear()
     return redirect("/login")
 
+@app.route("/feedback")
+def feedback():
+    return render_template("feedback.html")
+
 # --- LEGAL PAGES ---
 @app.route("/terms")
 def terms():
