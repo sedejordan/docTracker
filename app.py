@@ -90,6 +90,12 @@ app.config.update(
 # rejected automatically.
 csrf = CSRFProtect(app)
 
+# Function to check if the request is from UptimeRobot
+def is_uptimerobot():
+    """Skip rate limiting for UptimeRobot health checks."""
+    user_agent = request.headers.get('User-Agent', '')
+    return 'UptimeRobot' in user_agent or request.path == '/health'
+
 # --- RATE LIMITING ---
 # Without this, nothing stops someone from scripting thousands of login
 # attempts per second to brute-force a password, or hammering
@@ -110,6 +116,12 @@ limiter = Limiter(
     # tests/conftest.py.
     enabled=os.environ.get("DISABLE_RATE_LIMITING", "false").lower() != "true"
 )
+
+# Health check endpoint that bypasses rate limiting
+@app.route("/health")
+def health_check():
+    """Health check endpoint for UptimeRobot — no rate limit."""
+    return "OK", 200
 
 # Render provides this automatically once a PostgreSQL database is
 # created and linked to this web service. See README for local setup.
@@ -738,6 +750,15 @@ def delete_account():
 def logout():
     session.clear()
     return redirect("/login")
+
+# --- LEGAL PAGES ---
+@app.route("/terms")
+def terms():
+    return render_template("legal/terms.html")
+
+@app.route("/privacy")
+def privacy():
+    return render_template("legal/privacy.html")
 
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy - Fritt Tracker{% endblock %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto">
+  <div class="bg-white border border-line rounded-xl p-8 shadow-sm">
+    <h1 class="font-display font-bold text-3xl mb-2">Privacy Policy</h1>
+    <p class="text-muted text-sm mb-8">Last updated: August 1, 2026</p>
+    
+    <div class="prose prose-sm max-w-none space-y-6">
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">What Data We Collect</h2>
+        <p class="text-sm text-ink leading-relaxed">We collect minimal data to make the Service work:</p>
+        <ul class="list-disc pl-6 text-sm text-ink leading-relaxed space-y-1">
+          <li><strong>Email address</strong> - For login and notifications</li>
+          <li><strong>Document titles and expiry dates</strong> - Your tracking data</li>
+          <li><strong>Password hash</strong> - Encrypted, never stored as plain text</li>
+          <li><strong>IP addresses</strong> - For rate limiting and security</li>
+        </ul>
+        <p class="text-sm text-ink leading-relaxed mt-2">
+          We <strong>never</strong> sell your data to third parties or use it for marketing.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">How We Use Your Data</h2>
+        <ul class="list-disc pl-6 text-sm text-ink leading-relaxed space-y-1">
+          <li>To authenticate you when you log in</li>
+          <li>To store and display your documents</li>
+          <li>To send you important service updates (e.g., password resets)</li>
+          <li>To prevent abuse of the Service (rate limiting)</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">Data Storage</h2>
+        <p class="text-sm text-ink leading-relaxed">
+          Your data is stored in a secure PostgreSQL database on Render.com. 
+          We use industry-standard encryption for data in transit (HTTPS) and at rest.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">Data Deletion</h2>
+        <p class="text-sm text-ink leading-relaxed">
+          You can delete your account and all your documents at any time from the 
+          <a href="/delete-account" class="text-fritt hover:underline">Delete Account</a> page. 
+          When you delete, we permanently remove all your data from our database.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">Cookies</h2>
+        <p class="text-sm text-ink leading-relaxed">
+          We use cookies only for authentication and security:
+        </p>
+        <ul class="list-disc pl-6 text-sm text-ink leading-relaxed space-y-1">
+          <li><strong>Session cookie</strong> - Keeps you logged in</li>
+          <li><strong>CSRF token</strong> - Prevents cross-site request forgery attacks</li>
+        </ul>
+        <p class="text-sm text-ink leading-relaxed mt-2">
+          We don't use tracking cookies or analytics cookies.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">Third-Party Services</h2>
+        <p class="text-sm text-ink leading-relaxed">
+          We use the following third-party services to run Fritt Tracker:
+        </p>
+        <ul class="list-disc pl-6 text-sm text-ink leading-relaxed space-y-1">
+          <li><strong>Render.com</strong> - Hosting and PostgreSQL database</li>
+          <li><strong>Resend.com</strong> - Sending emails (password resets)</li>
+          <li><strong>Sentry</strong> - Error monitoring (optional)</li>
+        </ul>
+        <p class="text-sm text-ink leading-relaxed mt-2">
+          These services have their own privacy policies, but they only receive the data necessary 
+          to provide their service (e.g., your email for Resend, error logs for Sentry).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">Your Rights</h2>
+        <p class="text-sm text-ink leading-relaxed">You have the right to:</p>
+        <ul class="list-disc pl-6 text-sm text-ink leading-relaxed space-y-1">
+          <li>Access the data we hold about you</li>
+          <li>Request corrections to your data</li>
+          <li>Delete your account and data at any time</li>
+          <li>Opt out of communications (except essential service updates)</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-display font-bold text-xl mt-6 mb-3">Contact</h2>
+        <p class="text-sm text-ink leading-relaxed">
+          Questions about your privacy? Contact us at <a href="mailto:privacy@fritt.org" class="text-fritt hover:underline">privacy@fritt.org</a>
+        </p>
+      </section>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
