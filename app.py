@@ -347,10 +347,11 @@ def method_not_allowed(e):
 
 @app.route("/")
 def home():
-    """This is the first page the user sees after logging in"""
-    auth = require_login()
-    if auth:
-        return auth
+    """Show landing page for non-logged-in users, dashboard for logged-in users."""
+    # Check if user is logged in
+    if not session.get("user_id"):
+        # Not logged in → show landing page
+        return render_template("landing.html")
 
     user_id = session["user_id"]
     search_query = request.args.get("q", "").strip()

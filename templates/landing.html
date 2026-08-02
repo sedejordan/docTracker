@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fritt Tracker — Never miss a document expiry date again</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/static/fritt-tracker-logo.svg"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#14181F",
+              paper: "#F7F7F5",
+              fritt: { DEFAULT: "#2C5FEF", dark: "#1E46C4" },
+              muted: "#6B7280",
+              line: "#E4E4E1",
+            },
+            fontFamily: {
+              display: ['"Space Grotesk"', "sans-serif"],
+              body: ['"Inter"', "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-paper text-ink font-body min-h-screen">
+    <!-- Navigation -->
+    <header class="bg-white border-b border-line">
+      <div
+        class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between"
+      >
+        <div class="flex items-center gap-2">
+          <img
+            src="/static/fritt-tracker-logo.svg"
+            alt=""
+            class="w-8 h-8 rounded-md"
+          />
+          <span class="font-display font-bold text-xl text-fritt"
+            >Fritt Tracker</span
+          >
+        </div>
+        <div class="flex gap-3">
+          <a
+            href="/login"
+            class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors"
+            >Log In</a
+          >
+          <a
+            href="/register"
+            class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors"
+            >Sign Up Free</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="max-w-6xl mx-auto px-4 py-20 text-center">
+      <div class="max-w-3xl mx-auto">
+        <div
+          class="inline-block bg-blue-50 text-fritt text-sm font-medium px-4 py-1.5 rounded-full mb-6 border border-blue-100"
+        >
+          🚀 Beta — Free while we test
+        </div>
+        <h1
+          class="font-display font-bold text-5xl md:text-6xl leading-tight mb-6"
+        >
+          Never miss a <span class="text-fritt">document expiry</span> date
+          again
+        </h1>
+        <p class="text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed">
+          Track passports, visas, contracts, certifications, and insurance — all
+          in one place. Get visual reminders before they expire.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="/register"
+            class="px-8 py-4 rounded-md bg-fritt text-white font-medium text-lg hover:bg-fritt-dark transition-colors"
+          >
+            Get Started — It's Free
+          </a>
+          <a
+            href="#how-it-works"
+            class="px-8 py-4 rounded-md border border-line text-ink font-medium text-lg hover:bg-paper transition-colors"
+          >
+            How It Works →
+          </a>
+        </div>
+        <p class="text-sm text-muted mt-4">
+          No credit card required • 10 documents free forever
+        </p>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="max-w-6xl mx-auto px-4 py-16">
+      <h2 class="font-display font-bold text-3xl text-center mb-12">
+        How It Works
+      </h2>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-white border border-line rounded-xl p-6 text-center">
+          <div class="text-4xl mb-4">📄</div>
+          <h3 class="font-display font-bold text-lg mb-2">1. Add Documents</h3>
+          <p class="text-muted text-sm">
+            Enter a document title and its expiry date. That's it.
+          </p>
+        </div>
+        <div class="bg-white border border-line rounded-xl p-6 text-center">
+          <div class="text-4xl mb-4">🟢</div>
+          <h3 class="font-display font-bold text-lg mb-2">
+            2. See Status at a Glance
+          </h3>
+          <p class="text-muted text-sm">
+            Colors tell you instantly: Safe → Good → Warning → Urgent → Expired
+          </p>
+        </div>
+        <div class="bg-white border border-line rounded-xl p-6 text-center">
+          <div class="text-4xl mb-4">🔔</div>
+          <h3 class="font-display font-bold text-lg mb-2">
+            3. Never Miss a Renewal
+          </h3>
+          <p class="text-muted text-sm">
+            Always know what's about to expire. No more last-minute panic.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section class="max-w-6xl mx-auto px-4 py-16 border-t border-line">
+      <h2 class="font-display font-bold text-3xl text-center mb-12">
+        Who's it for?
+      </h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-white border border-line rounded-xl p-6">
+          <p class="text-sm font-medium text-fritt mb-1">Individuals</p>
+          <p class="text-muted text-sm">
+            Passports, visas, driver's licenses, insurance policies — all in one
+            place.
+          </p>
+        </div>
+        <div class="bg-white border border-line rounded-xl p-6">
+          <p class="text-sm font-medium text-fritt mb-1">Freelancers</p>
+          <p class="text-muted text-sm">
+            Track contracts, certifications, and client agreements. Never miss a
+            renewal.
+          </p>
+        </div>
+        <div class="bg-white border border-line rounded-xl p-6">
+          <p class="text-sm font-medium text-fritt mb-1">Small Teams</p>
+          <p class="text-muted text-sm">
+            Share important deadlines across your team. Everyone stays on the
+            same page.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Preview -->
+    <section class="max-w-6xl mx-auto px-4 py-16 border-t border-line">
+      <h2 class="font-display font-bold text-3xl text-center mb-4">
+        Simple Pricing
+      </h2>
+      <p class="text-muted text-center mb-12">
+        Track 10 documents free forever. Upgrade when you need more.
+      </p>
+      <div class="max-w-2xl mx-auto grid md:grid-cols-2 gap-6">
+        <div class="bg-white border-2 border-line rounded-xl p-8 text-center">
+          <h3 class="font-display font-bold text-lg mb-2">Free</h3>
+          <p class="text-3xl font-bold mb-2">$0</p>
+          <p class="text-muted text-sm mb-6">Forever</p>
+          <ul class="text-left text-sm space-y-2 mb-6">
+            <li class="flex items-center gap-2">✅ 10 documents</li>
+            <li class="flex items-center gap-2">✅ Visual status tracking</li>
+            <li class="flex items-center gap-2">✅ Search & filter</li>
+          </ul>
+        </div>
+        <div class="bg-white border-2 border-fritt rounded-xl p-8 text-center">
+          <div
+            class="inline-block bg-fritt text-white text-xs font-medium px-3 py-1 rounded-full mb-2"
+          >
+            Most Popular
+          </div>
+          <h3 class="font-display font-bold text-lg mb-2">Pro</h3>
+          <p class="text-3xl font-bold mb-2">$4.99</p>
+          <p class="text-muted text-sm mb-6">Per month</p>
+          <ul class="text-left text-sm space-y-2 mb-6">
+            <li class="flex items-center gap-2">✅ Unlimited documents</li>
+            <li class="flex items-center gap-2">✅ Everything in Free</li>
+            <li class="flex items-center gap-2">✅ Priority support</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer
+      class="max-w-6xl mx-auto px-4 py-8 text-center text-xs text-muted border-t border-line"
+    >
+      <p>© 2026 Fritt Tracker. All rights reserved.</p>
+    </footer>
+  </body>
+</html>
