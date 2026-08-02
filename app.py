@@ -90,12 +90,6 @@ app.config.update(
 # rejected automatically.
 csrf = CSRFProtect(app)
 
-# Function to check if the request is from UptimeRobot
-def is_uptimerobot():
-    """Skip rate limiting for UptimeRobot health checks."""
-    user_agent = request.headers.get('User-Agent', '')
-    return 'UptimeRobot' in user_agent or request.path == '/health'
-
 # --- RATE LIMITING ---
 # Without this, nothing stops someone from scripting thousands of login
 # attempts per second to brute-force a password, or hammering
@@ -119,6 +113,7 @@ limiter = Limiter(
 
 # Health check endpoint that bypasses rate limiting
 @app.route("/health")
+@limiter.exempt
 def health_check():
     """Health check endpoint for UptimeRobot — no rate limit."""
     return "OK", 200
