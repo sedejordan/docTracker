@@ -320,6 +320,72 @@ def get_owned_document(doc_id, user_id):
 
     return {"id": doc[0], "title": doc[1], "expiry_date": doc[2], "user_id": doc[3]}
 
+# Get user region 
+def get_user_region():
+    """
+    Detect user's region based on IP address.
+    Uses a free IP geolocation API.
+    """
+    try:
+        # Get user's IP address
+        if request.headers.get('X-Forwarded-For'):
+            ip = request.headers.get('X-Forwarded-For').split(',')[0]
+        else:
+            ip = request.remote_addr
+        
+        # Skip for localhost (testing)
+        if ip in ['127.0.0.1', 'localhost']:
+            return 'us'  # Default to US for testing
+        
+        # Use free API to get country
+        response = requests.get(f'http://ip-api.com/json/{ip}', timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            country_code = data.get('countryCode', '').upper()
+            
+            if country_code == 'NG':
+                return 'ng'
+            elif country_code == 'GB' or country_code == 'UK':
+                return 'uk'
+            else:
+                return 'us'  # Default for everyone else
+    except Exception as e:
+        print(f"Warning: Could not detect region: {e}")
+        return 'us'  # Default to US
+    
+    return 'us'  # Fallback
+
+# Get user pricing
+def get_pricing(region='us'):
+    """Return pricing based on region."""
+    pricing = {
+        'ng': {
+            'currency': '₦',
+            'monthly': '2,500',
+            'yearly': '25,000',
+            'monthly_raw': 2500,
+            'yearly_raw': 25000,
+            'region_name': 'Nigeria'
+        },
+        'uk': {
+            'currency': '£',
+            'monthly': '3.99',
+            'yearly': '39.99',
+            'monthly_raw': 3.99,
+            'yearly_raw': 39.99,
+            'region_name': 'United Kingdom'
+        },
+        'us': {
+            'currency': '$',
+            'monthly': '4.99',
+            'yearly': '49.99',
+            'monthly_raw': 4.99,
+            'yearly_raw': 49.99,
+            'region_name': 'Worldwide'
+        }
+    }
+    return pricing.get(region, pricing['us'])
+
 # --- CUSTOM ERROR PAGES ---
 # These replace Flask's default debug/error pages with branded versions
 # that match the Fritt Tracker design system. Users see these instead of
@@ -350,8 +416,10 @@ def home():
     """Show landing page for non-logged-in users, dashboard for logged-in users."""
     # Check if user is logged in
     if not session.get("user_id"):
-        # Not logged in → show landing page
-        return render_template("landing.html")
+        # Not logged in → show landing page with region-specific pricing
+        region = get_user_region()
+        pricing = get_pricing(region)
+        return render_template("landing.html", pricing=pricing)
 
     user_id = session["user_id"]
     search_query = request.args.get("q", "").strip()

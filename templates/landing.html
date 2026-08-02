@@ -83,8 +83,9 @@
           again
         </h1>
         <p class="text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed">
-          Track passports, visas, contracts, certifications, and insurance — all
-          in one place. Get visual reminders before they expire.
+          Track passports, visas, contracts, certifications, and pretty much
+          anything else — all in one place. Get visual reminders before they
+          expire.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a
@@ -149,15 +150,15 @@
         <div class="bg-white border border-line rounded-xl p-6">
           <p class="text-sm font-medium text-fritt mb-1">Individuals</p>
           <p class="text-muted text-sm">
-            Passports, visas, driver's licenses, insurance policies — all in one
-            place.
+            Passports, visas, driver's licenses, insurance policies, etc — all
+            in one place.
           </p>
         </div>
         <div class="bg-white border border-line rounded-xl p-6">
           <p class="text-sm font-medium text-fritt mb-1">Freelancers</p>
           <p class="text-muted text-sm">
-            Track contracts, certifications, and client agreements. Never miss a
-            renewal.
+            Track contracts, certifications, client agreements, and more. Never
+            miss a renewal.
           </p>
         </div>
         <div class="bg-white border border-line rounded-xl p-6">
@@ -175,13 +176,19 @@
       <h2 class="font-display font-bold text-3xl text-center mb-4">
         Simple Pricing
       </h2>
-      <p class="text-muted text-center mb-12">
+      <p class="text-muted text-center mb-4">
         Track 10 documents free forever. Upgrade when you need more.
       </p>
+
+      <!-- Show which region pricing is displayed for -->
+      <!--<p class="text-center text-xs text-muted mb-8">
+        Pricing shown for {{ pricing.region_name }}
+      </p>-->
+
       <div class="max-w-2xl mx-auto grid md:grid-cols-2 gap-6">
         <div class="bg-white border-2 border-line rounded-xl p-8 text-center">
           <h3 class="font-display font-bold text-lg mb-2">Free</h3>
-          <p class="text-3xl font-bold mb-2">$0</p>
+          <p class="text-3xl font-bold mb-2">Free</p>
           <p class="text-muted text-sm mb-6">Forever</p>
           <ul class="text-left text-sm space-y-2 mb-6">
             <li class="flex items-center gap-2">✅ 10 documents</li>
@@ -196,14 +203,31 @@
             Most Popular
           </div>
           <h3 class="font-display font-bold text-lg mb-2">Pro</h3>
-          <p class="text-3xl font-bold mb-2">$4.99</p>
-          <p class="text-muted text-sm mb-6">Per month</p>
+          <p class="text-3xl font-bold mb-2">
+            {{ pricing.currency }}{{ pricing.monthly }}
+          </p>
+          <p class="text-muted text-sm mb-1">Per month</p>
+          <p class="text-xs text-muted mb-6">
+            or {{ pricing.currency }}{{ pricing.yearly }} per year
+          </p>
           <ul class="text-left text-sm space-y-2 mb-6">
             <li class="flex items-center gap-2">✅ Unlimited documents</li>
             <li class="flex items-center gap-2">✅ Everything in Free</li>
             <li class="flex items-center gap-2">✅ Priority support</li>
           </ul>
+          <button
+            class="w-full py-2 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors"
+          >
+            Coming Soon
+          </button>
         </div>
+      </div>
+
+      <!-- Currency switcher (optional) -->
+      <div class="text-center mt-6">
+        <p class="text-xs text-muted">
+          Pricing automatically shown in your local currency.
+        </p>
       </div>
     </section>
 
