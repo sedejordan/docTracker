@@ -21,7 +21,9 @@
       <div class="relative">
         <input type="password" id="password" name="password" required
                class="w-full px-3 py-2 border border-line rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-fritt focus:border-transparent pr-10">
-        <button type="button" onclick="togglePassword('password', this)" 
+        <button type="button" onclick="togglePassword('password', this)"
+                title="Show/hide password"
+                aria-label="Toggle password visibility"
                 class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors">
           <svg class="w-5 h-5 eye-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
