@@ -74,24 +74,44 @@ def init_db():
     """)
 
     # Prevent duplicate documents per user (same title + expiry date)
-    # This runs every time the app starts - wrap in try/except so it doesn't
-    # fail if the constraint already exists.
     try:
+        # First, check if there are any duplicates
+        cursor.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT user_id, title, expiry_date, COUNT(*) 
+                FROM documents 
+                GROUP BY user_id, title, expiry_date 
+                HAVING COUNT(*) > 1
+            ) AS duplicates;
+        """)
+        duplicate_count = cursor.fetchone()[0]
+        
+        if duplicate_count > 0:
+            print(f"⚠️ Found {duplicate_count} duplicate document groups. Removing duplicates...")
+            # Keep only the oldest document per group (smallest ID)
+            cursor.execute("""
+                DELETE FROM documents 
+                WHERE id NOT IN (
+                    SELECT MIN(id) 
+                    FROM documents 
+                    GROUP BY user_id, title, expiry_date
+                );
+            """)
+            print(f"✅ Removed {cursor.rowcount} duplicate documents.")
+        
+        # Now safe to add the constraint
         cursor.execute("""
             ALTER TABLE documents ADD CONSTRAINT unique_document_for_user 
             UNIQUE (user_id, title, expiry_date);
         """)
         print("✅ Added unique constraint for documents")
+        
     except psycopg2.errors.DuplicateTable:
         # Constraint already exists - that's fine, nothing to do
         print("ℹ️ Unique constraint already exists, skipping")
     except Exception as e:
-        # If there are still duplicates, this will fail
+        # If something else went wrong, warn but don't crash
         print(f"⚠️ Could not add unique constraint: {e}")
-        print("Run clean_duplicates.py first if you see this error.")
-        # Don't raise - let the app continue, but warn the user
-        # If you want to force the app to fail, uncomment:
-        # raise
 
     conn.commit()
     cursor.close()
