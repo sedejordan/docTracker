@@ -73,6 +73,26 @@ def init_db():
         );
     """)
 
+    # Prevent duplicate documents per user (same title + expiry date)
+    # This runs every time the app starts - wrap in try/except so it doesn't
+    # fail if the constraint already exists.
+    try:
+        cursor.execute("""
+            ALTER TABLE documents ADD CONSTRAINT unique_document_for_user 
+            UNIQUE (user_id, title, expiry_date);
+        """)
+        print("✅ Added unique constraint for documents")
+    except psycopg2.errors.DuplicateTable:
+        # Constraint already exists - that's fine, nothing to do
+        print("ℹ️ Unique constraint already exists, skipping")
+    except Exception as e:
+        # If there are still duplicates, this will fail
+        print(f"⚠️ Could not add unique constraint: {e}")
+        print("Run clean_duplicates.py first if you see this error.")
+        # Don't raise - let the app continue, but warn the user
+        # If you want to force the app to fail, uncomment:
+        # raise
+
     conn.commit()
     cursor.close()
     conn.close()
