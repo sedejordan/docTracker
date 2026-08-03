@@ -73,7 +73,7 @@ def init_db():
         );
     """)
 
-    # Prevent duplicate documents per user (same title + expiry date)
+        # Prevent duplicate documents per user (same title + expiry date)
     try:
         # First, check if there are any duplicates
         cursor.execute("""
@@ -88,13 +88,20 @@ def init_db():
         
         if duplicate_count > 0:
             print(f"⚠️ Found {duplicate_count} duplicate document groups. Removing duplicates...")
-            # Keep only the oldest document per group (smallest ID)
+            
+            # Safer approach: Use a CTE to delete duplicates
             cursor.execute("""
-                DELETE FROM documents 
-                WHERE id NOT IN (
-                    SELECT MIN(id) 
-                    FROM documents 
-                    GROUP BY user_id, title, expiry_date
+                WITH duplicates AS (
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY user_id, title, expiry_date 
+                               ORDER BY id
+                           ) as rn
+                    FROM documents
+                )
+                DELETE FROM documents
+                WHERE id IN (
+                    SELECT id FROM duplicates WHERE rn > 1
                 );
             """)
             print(f"✅ Removed {cursor.rowcount} duplicate documents.")
@@ -110,8 +117,9 @@ def init_db():
         # Constraint already exists - that's fine, nothing to do
         print("ℹ️ Unique constraint already exists, skipping")
     except Exception as e:
-        # If something else went wrong, warn but don't crash
         print(f"⚠️ Could not add unique constraint: {e}")
+        # If you want to see the actual error details
+        # raise
 
     conn.commit()
     cursor.close()
