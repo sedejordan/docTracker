@@ -3,6 +3,7 @@ import psycopg2
 from datetime import datetime, timedelta
 import requests
 
+APP_URL = os.environ.get("APP_URL", "https://doctracker-bxxw.onrender.com")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 
@@ -21,9 +22,9 @@ def send_reminder_email(email, documents, urgency):
     for doc in documents:
         html += f"<li><strong>{doc['title']}</strong> — expires {doc['expiry_date']} ({doc['days_left']} days left)</li>"
     
-    html += """
+    html += f"""
     </ul>
-    <p><a href="https://fritt-tracker.onrender.com">View your dashboard →</a></p>
+    <p><a href="{APP_URL}">View your dashboard →</a></p>
     <p style="font-size: 12px; color: #666;">Update reminders in your account settings.</p>
     """
     

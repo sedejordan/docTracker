@@ -46,7 +46,7 @@ from database import init_db, get_db
 # CHANGE!!!
 # A secret token (store in environment variables as TRIGGER_SECRET)
 # When you create the cron job, you'll pass this in the URL or a header
-TRIGGER_SECRET = os.environ.get("TRIGGER_SECRET", "change_this_in_production")
+TRIGGER_SECRET = os.environ.get("TRIGGER_SECRET", "df466afcf81aab5f9334f64980873634")
 
 # --- ERROR MONITORING (Sentry) ---
 # Optional - only enabled if SENTRY_DSN environment variable is set.
@@ -68,6 +68,8 @@ else:
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
+
+app.config['SERVER_NAME'] = os.environ.get("APP_URL", "doctracker-bxxw.onrender.com")
 
 # --- SECURE COOKIE SETTINGS ---
 # SESSION_COOKIE_SECURE: only send the login cookie over HTTPS, never plain
