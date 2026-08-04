@@ -62,21 +62,29 @@
     <p class="mt-4 font-display text-sm tracking-wide text-muted">FRITT TRACKER</p>
   </div>
 
-  {% if session.get("user_id") %}
-  <header class="bg-white border-b border-line">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <a href="/" class="flex items-center gap-1 font-display font-bold text-lg tracking-tight text-ink">
-        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-7 h-7 rounded-md">
-        <span class="text-fritt">Fritt Tracker</span>
+    <header class="bg-white border-b border-line">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2">
+        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
+        <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
       </a>
-      <nav class="flex flex-wrap gap-2">
-        <a href="/add" class="px-3 py-1.5 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
-        <a href="/change-password" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>
-        <a href="/logout" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Logout</a>
-      </nav>
+      
+      {% if session.get("user_id") %}
+        <!-- Logged-in navigation -->
+        <nav class="flex flex-wrap gap-2">
+          <a href="/add" class="px-3 py-1.5 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
+          <a href="/change-password" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>
+          <a href="/logout" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Logout</a>
+        </nav>
+      {% else %}
+        <!-- Logged-out navigation -->
+        <div class="flex gap-3">
+          <a href="/login" class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors">Log In</a>
+          <a href="/register" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">Sign Up Free</a>
+        </div>
+      {% endif %}
     </div>
   </header>
-  {% endif %}
 
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
