@@ -1,240 +1,156 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fritt Tracker — Never miss a document expiry date again</title>
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="/static/fritt-tracker-logo.svg"
-    />
+{% extends "base.html" %}
+{% block title %}Fritt Tracker — Never Miss a Document Renewal{% endblock %}
+{% block content %}
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
+<!-- Hero Section -->
+<section class="text-center py-16 md:py-24">
+  <h1 class="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-tight text-ink leading-tight">
+    Never Miss a<br>
+    <span class="text-fritt">Document Renewal</span> Again
+  </h1>
+  <p class="text-lg md:text-xl text-muted max-w-2xl mx-auto mt-4">
+    Track insurance certificates, licenses, contracts, and more — 
+    get reminded before they expire. Used by business owners to monitor documents efficiently.
+  </p>
+  <div class="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+    <a href="/register" class="px-8 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-lg">
+      Start Free — No Credit Card
+    </a>
+    <a href="#how-it-works" class="px-8 py-3 rounded-md border border-line text-ink font-medium hover:bg-paper transition-colors text-lg">
+      How It Works
+    </a>
+  </div>
+  <p class="text-sm text-muted mt-4">Free for up to 10 documents. No commitment.</p>
+</section>
 
-    <meta property="og:title" content="Fritt Tracker — Never miss a document expiry date again" />
-    <meta property="og:description" content="Track passports, visas, contracts, and insurance expiry dates. Free while we test." />
-    <meta property="og:image" content="https://fritt-tracker.onrender.com/static/fritt-tracker-logo.png" />
-    <meta property="og:url" content="https://fritt-tracker.onrender.com" />
-    <meta name="twitter:card" content="summary_large_image" />
+<!-- Trust/Stats Section -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-6 py-12 border-t border-b border-line">
+  <div class="text-center">
+    <div class="text-3xl font-bold text-fritt">10+</div>
+    <div class="text-sm text-muted">Documents Tracked</div>
+  </div>
+  <div class="text-center">
+    <div class="text-3xl font-bold text-fritt">100%</div>
+    <div class="text-sm text-muted">On-Time Renewals</div>
+  </div>
+  <div class="text-center">
+    <div class="text-3xl font-bold text-fritt">$0</div>
+    <div class="text-sm text-muted">To Start</div>
+  </div>
+  <div class="text-center">
+    <div class="text-3xl font-bold text-fritt">5 min</div>
+    <div class="text-sm text-muted">Setup Time</div>
+  </div>
+</section>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              ink: "#14181F",
-              paper: "#F7F7F5",
-              fritt: { DEFAULT: "#2C5FEF", dark: "#1E46C4" },
-              muted: "#6B7280",
-              line: "#E4E4E1",
-            },
-            fontFamily: {
-              display: ['"Space Grotesk"', "sans-serif"],
-              body: ['"Inter"', "sans-serif"],
-            },
-          },
-        },
-      };
-    </script>
-  </head>
-  <body class="bg-paper text-ink font-body min-h-screen">
-    <!-- Navigation -->
-    <header class="bg-white border-b border-line">
-      <div
-        class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between"
-      >
-        <div class="flex items-center gap-2">
-          <img
-            src="/static/fritt-tracker-logo.svg"
-            alt=""
-            class="w-8 h-8 rounded-md"
-          />
-          <span class="font-display font-bold text-xl text-fritt"
-            >Fritt Tracker</span
-          >
-        </div>
-        <div class="flex gap-3">
-          <a
-            href="/login"
-            class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors"
-            >Log In</a
-          >
-          <a
-            href="/register"
-            class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors"
-            >Sign Up Free</a
-          >
-        </div>
-      </div>
-    </header>
+<!-- Problem/Solution Section -->
+<section id="features" class="py-16">
+  <h2 class="font-display font-bold text-3xl text-center mb-12">Why Business Owners Love Fritt Tracker</h2>
+  <div class="grid md:grid-cols-3 gap-8">
+    <div class="bg-white border border-line rounded-xl p-6 text-center">
+      <div class="text-4xl mb-3">📋</div>
+      <h3 class="font-display font-bold text-lg mb-2">One Place for All Docs</h3>
+      <p class="text-muted text-sm">Insurance, licenses, contracts, permits, etc — track them all in one dashboard.</p>
+    </div>
+    <div class="bg-white border border-line rounded-xl p-6 text-center">
+      <div class="text-4xl mb-3">🔔</div>
+      <h3 class="font-display font-bold text-lg mb-2">Never Forget a Renewal</h3>
+      <p class="text-muted text-sm">Visual status indicators show you exactly what's urgent — green to red.</p>
+    </div>
+    <div class="bg-white border border-line rounded-xl p-6 text-center">
+      <div class="text-4xl mb-3">💰</div>
+      <h3 class="font-display font-bold text-lg mb-2">Avoid Costly Fines</h3>
+      <p class="text-muted text-sm">Expired licenses and permits can mean fines. We help you stay compliant.</p>
+    </div>
+  </div>
+</section>
 
-    <!-- Hero Section -->
-    <section class="max-w-6xl mx-auto px-4 py-20 text-center">
-      <div class="max-w-3xl mx-auto">
-        <div
-          class="inline-block bg-blue-50 text-fritt text-sm font-medium px-4 py-1.5 rounded-full mb-6 border border-blue-100"
-        >
-          🚀 Beta — Free while we test
-        </div>
-        <h1
-          class="font-display font-bold text-5xl md:text-6xl leading-tight mb-6"
-        >
-          Never miss a <span class="text-fritt">document expiry</span> date
-          again
-        </h1>
-        <p class="text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed">
-          Track passports, visas, contracts, certifications, and pretty much
-          anything else — all in one place. Get visual reminders before they
-          expire.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a
-            href="/register"
-            class="px-8 py-4 rounded-md bg-fritt text-white font-medium text-lg hover:bg-fritt-dark transition-colors"
-          >
-            Get Started — It's Free
-          </a>
-          <a
-            href="#how-it-works"
-            class="px-8 py-4 rounded-md border border-line text-ink font-medium text-lg hover:bg-paper transition-colors"
-          >
-            How It Works →
-          </a>
-        </div>
-        <p class="text-sm text-muted mt-4">
-          No credit card required • 10 documents free forever
-        </p>
-      </div>
-    </section>
+<!-- How It Works Section -->
+<section id="how-it-works" class="py-16 bg-paper border-t border-line">
+  <h2 class="font-display font-bold text-3xl text-center mb-4">How It Works</h2>
+  <p class="text-center text-muted mb-12">Three simple steps to never miss a renewal again.</p>
+  
+  <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+    <!-- Step 1 -->
+    <div class="text-center">
+      <div class="w-16 h-16 rounded-full bg-fritt text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">1</div>
+      <h3 class="font-display font-bold text-lg mb-2">Add Your Documents</h3>
+      <p class="text-muted text-sm">Enter the document title and expiry date. That's it — no complex setup.</p>
+    </div>
+    
+    <!-- Step 2 -->
+    <div class="text-center">
+      <div class="w-16 h-16 rounded-full bg-fritt text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">2</div>
+      <h3 class="font-display font-bold text-lg mb-2">See What's Urgent</h3>
+      <p class="text-muted text-sm">Documents are color-coded: Safe (🟦) → Good (🟢) → Warning (🟠) → Urgent (🔴) → Expired (⚫).</p>
+    </div>
+    
+    <!-- Step 3 -->
+    <div class="text-center">
+      <div class="w-16 h-16 rounded-full bg-fritt text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">3</div>
+      <h3 class="font-display font-bold text-lg mb-2">Renew On Time</h3>
+      <p class="text-muted text-sm">Get reminded before documents expire. Renew with confidence, never pay a fine.</p>
+    </div>
+  </div>
+  
+  <!-- Visual Example (Optional) -->
+  <div class="max-w-2xl mx-auto mt-8 bg-white border border-line rounded-xl p-6">
+    <p class="text-sm text-muted text-center mb-3">Here's what your dashboard looks like:</p>
+    <div class="flex flex-wrap gap-3 justify-center">
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200">🟦 Safe — 400 days left</span>
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">🟢 Good — 200 days left</span>
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-orange-50 text-orange-700 border-orange-200">🟠 Warning — 80 days left</span>
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">🔴 Urgent — 20 days left</span>
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border bg-slate-100 text-slate-700 border-slate-300">⚫ Expired — 5 days overdue</span>
+    </div>
+  </div>
+</section>
 
-    <!-- How It Works -->
-    <section id="how-it-works" class="max-w-6xl mx-auto px-4 py-16">
-      <h2 class="font-display font-bold text-3xl text-center mb-12">
-        How It Works
-      </h2>
-      <div class="grid md:grid-cols-3 gap-8">
-        <div class="bg-white border border-line rounded-xl p-6 text-center">
-          <div class="text-4xl mb-4">📄</div>
-          <h3 class="font-display font-bold text-lg mb-2">1. Add Documents</h3>
-          <p class="text-muted text-sm">
-            Enter a document title and its expiry date. That's it.
-          </p>
-        </div>
-        <div class="bg-white border border-line rounded-xl p-6 text-center">
-          <div class="text-4xl mb-4">🟢</div>
-          <h3 class="font-display font-bold text-lg mb-2">
-            2. See Status at a Glance
-          </h3>
-          <p class="text-muted text-sm">
-            Colors tell you instantly: Safe → Good → Warning → Urgent → Expired
-          </p>
-        </div>
-        <div class="bg-white border border-line rounded-xl p-6 text-center">
-          <div class="text-4xl mb-4">🔔</div>
-          <h3 class="font-display font-bold text-lg mb-2">
-            3. Never Miss a Renewal
-          </h3>
-          <p class="text-muted text-sm">
-            Always know what's about to expire. No more last-minute panic.
-          </p>
-        </div>
-      </div>
-    </section>
+<!-- Pricing Section -->
+<section class="py-16 bg-white border-t border-line">
+  <h2 class="font-display font-bold text-3xl text-center mb-4">Simple, Transparent Pricing</h2>
+  <p class="text-center text-muted mb-12">Start free, upgrade when you need more.</p>
+  
+  <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+    <!-- Free Tier -->
+    <div class="border border-line rounded-xl p-8 text-center">
+      <h3 class="font-display font-bold text-xl mb-2">Free</h3>
+      <p class="text-3xl font-bold text-ink mb-1">$0</p>
+      <p class="text-sm text-muted mb-4">forever</p>
+      <ul class="text-sm text-left space-y-2 mb-6">
+        <li class="flex items-center gap-2">✅ Track up to 10 documents</li>
+        <li class="flex items-center gap-2">✅ Status indicators (Safe → Expired)</li>
+        <li class="flex items-center gap-2">✅ Search and filter</li>
+      </ul>
+      <a href="/register" class="block w-full py-2 rounded-md border border-line text-ink font-medium hover:bg-paper transition-colors">Get Started</a>
+    </div>
+    
+    <!-- Pro Tier -->
+    <div class="border-2 border-fritt rounded-xl p-8 text-center relative">
+      <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-fritt text-white text-xs font-medium px-3 py-1 rounded-full">Popular</span>
+      <h3 class="font-display font-bold text-xl mb-2">Pro</h3>
+      <p class="text-3xl font-bold text-fritt mb-1">$4.99</p>
+      <p class="text-sm text-muted mb-4">per month</p>
+      <ul class="text-sm text-left space-y-2 mb-6">
+        <li class="flex items-center gap-2">✅ Unlimited documents</li>
+        <li class="flex items-center gap-2">✅ Everything in Free</li>
+        <li class="flex items-center gap-2">✅ Priority support</li>
+      </ul>
+      <button class="block w-full py-2 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors opacity-50 cursor-not-allowed" disabled>
+        Coming Soon
+      </button>
+      <p class="text-xs text-muted mt-2">Beta — Free until launch</p>
+    </div>
+  </div>
+</section>
 
-    <!-- Use Cases -->
-    <section class="max-w-6xl mx-auto px-4 py-16 border-t border-line">
-      <h2 class="font-display font-bold text-3xl text-center mb-12">
-        Who's it for?
-      </h2>
-      <div class="grid md:grid-cols-3 gap-6">
-        <div class="bg-white border border-line rounded-xl p-6">
-          <p class="text-sm font-medium text-fritt mb-1">Individuals</p>
-          <p class="text-muted text-sm">
-            Passports, visas, driver's licenses, insurance policies, etc — all
-            in one place.
-          </p>
-        </div>
-        <div class="bg-white border border-line rounded-xl p-6">
-          <p class="text-sm font-medium text-fritt mb-1">Freelancers</p>
-          <p class="text-muted text-sm">
-            Track contracts, certifications, client agreements, and more. Never
-            miss a renewal.
-          </p>
-        </div>
-        <div class="bg-white border border-line rounded-xl p-6">
-          <p class="text-sm font-medium text-fritt mb-1">Small Teams</p>
-          <p class="text-muted text-sm">
-            Share important deadlines across your team. Everyone stays on the
-            same page.
-          </p>
-        </div>
-      </div>
-    </section>
+<!-- CTA Section -->
+<section class="text-center py-16">
+  <h2 class="font-display font-bold text-3xl mb-4">Ready to Stop Missing Renewals?</h2>
+  <p class="text-muted mb-6">Join other business owners who trust Fritt Tracker.</p>
+  <a href="/register" class="px-8 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-lg">
+    Start Free — 10 Documents
+  </a>
+</section>
 
-    <!-- Pricing Preview -->
-    <section class="max-w-6xl mx-auto px-4 py-16 border-t border-line">
-      <h2 class="font-display font-bold text-3xl text-center mb-4">
-        Simple Pricing
-      </h2>
-      <p class="text-muted text-center mb-4">
-        Track 10 documents free forever. Upgrade when you need more.
-      </p>
-
-      <!-- Show which region pricing is displayed for -->
-      <!--<p class="text-center text-xs text-muted mb-8">
-        Pricing shown for {{ pricing.region_name }}
-      </p>-->
-
-      <div class="max-w-2xl mx-auto grid md:grid-cols-2 gap-6">
-        <div class="bg-white border-2 border-line rounded-xl p-8 text-center">
-          <h3 class="font-display font-bold text-lg mb-2">Free</h3>
-          <p class="text-3xl font-bold mb-2">Free</p>
-          <p class="text-muted text-sm mb-6">Forever</p>
-          <ul class="text-left text-sm space-y-2 mb-6">
-            <li class="flex items-center gap-2">✅ 10 documents</li>
-            <li class="flex items-center gap-2">✅ Visual status tracking</li>
-            <li class="flex items-center gap-2">✅ Search & filter</li>
-          </ul>
-        </div>
-        <div class="bg-white border-2 border-fritt rounded-xl p-8 text-center">
-          <div
-            class="inline-block bg-fritt text-white text-xs font-medium px-3 py-1 rounded-full mb-2"
-          >
-            Most Popular
-          </div>
-          <h3 class="font-display font-bold text-lg mb-2">Pro</h3>
-          <p class="text-3xl font-bold mb-2">
-            {{ pricing.currency }}{{ pricing.monthly }}
-          </p>
-          <p class="text-muted text-sm mb-1">Per month</p>
-          <p class="text-xs text-muted mb-6">
-            or {{ pricing.currency }}{{ pricing.yearly }} per year
-          </p>
-          <ul class="text-left text-sm space-y-2 mb-6">
-            <li class="flex items-center gap-2">✅ Unlimited documents</li>
-            <li class="flex items-center gap-2">✅ Everything in Free</li>
-            <li class="flex items-center gap-2">✅ Priority support</li>
-          </ul>
-          <button
-            class="w-full py-2 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors"
-          >
-            Coming Soon
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer
-      class="max-w-6xl mx-auto px-4 py-8 text-center text-xs text-muted border-t border-line"
-    >
-      <p>© 2026 Fritt Tracker. All rights reserved.</p>
-    </footer>
-  </body>
-</html>
+{% endblock %}
