@@ -39,8 +39,14 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask import flash
+import subprocess
 
 from database import init_db, get_db
+
+# CHANGE!!!
+# A secret token (store in environment variables as TRIGGER_SECRET)
+# When you create the cron job, you'll pass this in the URL or a header
+TRIGGER_SECRET = os.environ.get("TRIGGER_SECRET", "change_this_in_production")
 
 # --- ERROR MONITORING (Sentry) ---
 # Optional - only enabled if SENTRY_DSN environment variable is set.
@@ -890,6 +896,31 @@ def mark_renewed(doc_id):
                 return redirect("/")
 
     return render_template("renewed.html", doc=doc, error=error, success=success)
+
+@app.route("/cron/reminders")
+def run_reminders():
+    """Endpoint triggered by cron-job.org to send daily reminders."""
+    # Check for the secret token to authenticate the request
+    provided_token = request.args.get("token") or request.headers.get("X-Trigger-Token")
+    
+    if provided_token != TRIGGER_SECRET:
+        abort(401, "Unauthorized: Invalid token")
+    
+    # Run the reminders.py script
+    try:
+        result = subprocess.run(
+            ["python", "reminders.py"],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minutes max
+        )
+        
+        if result.returncode == 0:
+            return f"✅ Reminders sent successfully.\n\n{result.stdout}", 200
+        else:
+            return f"❌ Reminders failed.\n\n{result.stderr}", 500
+    except Exception as e:
+        return f"❌ Error: {str(e)}", 500
 
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your
