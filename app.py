@@ -906,22 +906,13 @@ def run_reminders():
     if provided_token != TRIGGER_SECRET:
         abort(401, "Unauthorized: Invalid token")
     
-    # Run the reminders.py script
     try:
-        result = subprocess.run(
-            ["python", "reminders.py"],
-            capture_output=True,
-            text=True,
-            timeout=300  # 5 minutes max
-        )
-        
-        if result.returncode == 0:
-            return f"✅ Reminders sent successfully.\n\n{result.stdout}", 200
-        else:
-            return f"❌ Reminders failed.\n\n{result.stderr}", 500
+        import reminders
+        reminders.check_and_send_reminders()
+        return "✅ Reminders sent successfully.", 200
     except Exception as e:
-        return f"❌ Error: {str(e)}", 500
-
+        return f"❌ Reminders failed: {str(e)}", 500
+    
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your
     # custom error pages instead of the interactive debugger.

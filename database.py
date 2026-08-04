@@ -73,7 +73,7 @@ def init_db():
         );
     """)
 
-        # Prevent duplicate documents per user (same title + expiry date)
+    # Prevent duplicate documents per user (same title + expiry date)
     try:
         # First, check if there are any duplicates
         cursor.execute("""
@@ -121,17 +121,22 @@ def init_db():
         # If you want to see the actual error details
         # raise
 
+    # 🔥 FIX: Commit the transaction here to end the aborted state
+    conn.commit()
+
+    # Now start a NEW transaction for adding columns
     try:
         cursor.execute("""
-            ALTER TABLE documents ADD COLUMN last_reminder_sent DATE;
-            ALTER TABLE documents ADD COLUMN reminder_state TEXT; -- warning, urgent, critical, expired
-            ALTER TABLE documents ADD COLUMN snoozed_until DATE;
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS last_reminder_sent DATE;
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS reminder_state TEXT;
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS snoozed_until DATE;
         """)
+        print("✅ Added reminder columns to documents table")
+        conn.commit()
     except Exception as e:
         print(f"Could not add columns last_reminder_sent, reminder_state, snoozed_until: {e}")
+        conn.rollback()  # Rollback this specific failed transaction
 
-
-    conn.commit()
     cursor.close()
     conn.close()
 
