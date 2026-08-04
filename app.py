@@ -282,7 +282,7 @@ def get_status(expiry_date_str):
     today = datetime.today().date()
     days_left = (expiry_date - today).days
 
-    if days_left > 120:
+    if days_left >= 120:
         return days_left, "Safe", "blue", "🟦"
     elif days_left >= 60:
         return days_left, "Good", "green", "🟢"
