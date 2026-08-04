@@ -38,6 +38,7 @@ import psycopg2
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask import flash
 
 from database import init_db, get_db
 
@@ -488,11 +489,22 @@ def add_document():
             conn = get_db()
             try:
                 cursor = conn.cursor()
+                # Check for existing document
                 cursor.execute(
-                    "INSERT INTO documents (title, expiry_date, user_id) VALUES (%s, %s, %s)",
-                    (title, expiry_date, session["user_id"])
+                    "SELECT id FROM documents WHERE user_id = %s AND title = %s AND expiry_date = %s",
+                    (session["user_id"], title, expiry_date)
                 )
-                conn.commit()
+                existing = cursor.fetchone()
+                
+                if existing:
+                    error = "You already have a document with this title and expiry date."
+                else:
+                    cursor.execute(
+                        "INSERT INTO documents (title, expiry_date, user_id) VALUES (%s, %s, %s)",
+                        (title, expiry_date, session["user_id"])
+                    )
+                    conn.commit()
+                    flash("✅ Document added successfully!", "success")
                 cursor.close()
             finally:
                 conn.close()
@@ -527,6 +539,7 @@ def delete_document(doc_id):
     #     if os.path.exists(filepath):
     #         os.remove(filepath)
 
+    flash("✅ Document deleted successfully!", "success")
     return redirect("/")
 
 
@@ -566,6 +579,7 @@ def edit_document(doc_id):
                     cursor.close()
                 finally:
                     conn.close()
+                flash("✅ Document updated successfully!", "success")
                 return redirect("/")
 
     return render_template("edit.html", doc=doc, error=error)

@@ -35,8 +35,6 @@
   <div class="bg-fritt text-white text-center text-sm py-1.5 px-4 font-medium">
     🚀 Beta — Free while we test. <span class="opacity-75">Your feedback shapes the product.</span>
   </div>
-  
-  <!-- Rest of your page -->
 
   <!-- Loading overlay: shown by loading.js on form submits and internal
        link clicks. This is the Fritt Tracker icon itself (document +
@@ -79,6 +77,19 @@
     </div>
   </header>
   {% endif %}
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="max-w-4xl mx-auto px-4 pt-4">
+        {% for category, message in messages %}
+          <div class="px-4 py-3 rounded-md border {% if category == 'success' %}bg-green-50 border-green-200 text-green-700{% else %}bg-red-50 border-red-200 text-red-700{% endif %} text-sm">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
   <main class="max-w-4xl mx-auto px-4 py-8">
     {% block content %}{% endblock %}
