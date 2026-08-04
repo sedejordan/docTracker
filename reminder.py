@@ -56,13 +56,13 @@ def check_and_send_reminders():
     users = cursor.fetchall()
     
     for user_id, email in users:
-        # Get all expiring documents for this user
+        # Get all documents expiring within 120 days (matches your "Safe" threshold)
         cursor.execute("""
             SELECT id, title, expiry_date::date,
                    (expiry_date::date - %s) as days_left
             FROM documents
             WHERE user_id = %s
-            AND expiry_date::date <= %s + INTERVAL '6 months'
+            AND expiry_date::date <= %s + INTERVAL '120 days'
             ORDER BY expiry_date ASC
         """, (today, user_id, today))
         
@@ -71,11 +71,12 @@ def check_and_send_reminders():
         if not docs:
             continue
         
-        # Categorize by urgency
-        critical = []
-        urgent = []
-        warning = []
-        
+        # Categorize based on your new thresholds
+        critical = []      # 0-7 days (matches your "Urgent" threshold change)
+        urgent = []        # 8-60 days (matches your "Warning" → "Urgent" transition)
+        warning = []       # 61-120 days (matches your "Good" → "Warning" transition)
+        expired = []  # <0 days
+
         for doc_id, title, expiry_date, days_left in docs:
             doc = {
                 'id': doc_id,
@@ -84,17 +85,19 @@ def check_and_send_reminders():
                 'days_left': days_left
             }
             
-            if days_left <= 7:
+            if days_left < 0:
+                expired.append(doc)
+            elif days_left <= 7:
                 critical.append(doc)
-            elif days_left <= 90:
+            elif days_left <= 60:
                 urgent.append(doc)
             else:
                 warning.append(doc)
-        
-        # Determine which emails to send based on frequency
-        # For MVP: send daily if any critical, weekly if any urgent, monthly if any warning
-        
-        if critical:
+
+        # Send expired emails daily (same as critical)
+        if expired:
+            send_reminder_email(email, expired, "EXPIRED")
+        elif critical:
             send_reminder_email(email, critical, "CRITICAL")
         elif urgent:
             # Check if it's been at least 7 days since last reminder

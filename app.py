@@ -842,13 +842,54 @@ def terms():
 def privacy():
     return render_template("legal/privacy.html")
 
-@app.route("/renewed/<int:doc_id>")
+@app.route("/renewed/<int:doc_id>", methods=["GET", "POST"])
 def mark_renewed(doc_id):
     """Mark a document as renewed and set a new expiry date."""
-    # Get the document
-    # Show a simple form to set new expiry date
-    # Update expiry_date and reset reminder state
-    pass
+    auth = require_login()
+    if auth:
+        return auth
+
+    user_id = session["user_id"]
+    doc = get_owned_document(doc_id, user_id)
+    
+    if not doc:
+        abort(404)
+
+    error = None
+    success = None
+
+    if request.method == "POST":
+        new_expiry = request.form.get("expiry_date")
+        
+        if not new_expiry:
+            error = "Please select a new expiry date."
+        else:
+            try:
+                datetime.strptime(new_expiry, "%Y-%m-%d")
+            except ValueError:
+                error = "Invalid date format."
+            else:
+                conn = get_db()
+                try:
+                    cursor = conn.cursor()
+                    # Update expiry date and reset reminder tracking
+                    cursor.execute("""
+                        UPDATE documents 
+                        SET expiry_date = %s, 
+                            last_reminder_sent = NULL, 
+                            reminder_state = NULL, 
+                            snoozed_until = NULL 
+                        WHERE id = %s AND user_id = %s
+                    """, (new_expiry, doc_id, user_id))
+                    conn.commit()
+                    cursor.close()
+                finally:
+                    conn.close()
+                
+                flash("✅ Document renewed successfully! New expiry date set.", "success")
+                return redirect("/")
+
+    return render_template("renewed.html", doc=doc, error=error, success=success)
 
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your
