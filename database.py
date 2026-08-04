@@ -73,6 +73,19 @@ def init_db():
         );
     """)
 
+     # Now start a NEW transaction for adding columns
+    try:
+        cursor.execute("""
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS last_reminder_sent DATE;
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS reminder_state TEXT;
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS snoozed_until DATE;
+        """)
+        conn.commit()
+        print("✅ Added reminder columns to documents table")
+    except Exception as e:
+        print(f"⚠️ Could not add reminder columns: {e}")
+        conn.rollback()
+
     # Prevent duplicate documents per user (same title + expiry date)
     try:
         # First, check if there are any duplicates
@@ -112,30 +125,17 @@ def init_db():
             UNIQUE (user_id, title, expiry_date);
         """)
         print("✅ Added unique constraint for documents")
-        
+        conn.commit()
+
     except psycopg2.errors.DuplicateTable:
         # Constraint already exists - that's fine, nothing to do
         print("ℹ️ Unique constraint already exists, skipping")
-    except Exception as e:
-        print(f"⚠️ Could not add unique constraint: {e}")
-        # If you want to see the actual error details
-        # raise
-
-    # 🔥 FIX: Commit the transaction here to end the aborted state
-    conn.commit()
-
-    # Now start a NEW transaction for adding columns
-    try:
-        cursor.execute("""
-            ALTER TABLE documents ADD COLUMN IF NOT EXISTS last_reminder_sent DATE;
-            ALTER TABLE documents ADD COLUMN IF NOT EXISTS reminder_state TEXT;
-            ALTER TABLE documents ADD COLUMN IF NOT EXISTS snoozed_until DATE;
-        """)
-        print("✅ Added reminder columns to documents table")
         conn.commit()
     except Exception as e:
-        print(f"Could not add columns last_reminder_sent, reminder_state, snoozed_until: {e}")
-        conn.rollback()  # Rollback this specific failed transaction
+        print(f"⚠️ Could not add unique constraint: {e}")
+        conn.rollback()
+        # If you want to see the actual error details
+        # raise
 
     cursor.close()
     conn.close()
