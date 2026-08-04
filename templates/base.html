@@ -122,43 +122,5 @@
       }
     }
   </script>
-
-  <script>
-    // Pricing configuration per currency
-    const pricing = {
-      USD: {
-        monthly: '$4.99',
-        yearly: '$49.99'
-      },
-      GBP: {
-        monthly: '£3.99',
-        yearly: '£39.99'
-      },
-      NGN: {
-        monthly: '₦2,500',
-        yearly: '₦24,999'
-      }
-    };
-    
-    let currentCurrency = 'USD';
-    
-    function setCurrency(currency) {
-      currentCurrency = currency;
-      
-      // Update prices
-      document.getElementById('pro-monthly').textContent = pricing[currency].monthly;
-      document.getElementById('pro-yearly').textContent = pricing[currency].yearly;
-      
-      // Update button styles
-      document.querySelectorAll('.currency-btn').forEach(btn => {
-        btn.classList.remove('bg-fritt', 'text-white', 'border-fritt');
-        btn.classList.add('border-line');
-        if (btn.dataset.currency === currency) {
-          btn.classList.add('bg-fritt', 'text-white', 'border-fritt');
-          btn.classList.remove('border-line');
-        }
-      });
-    }
-  </script>
 </body>
 </html>

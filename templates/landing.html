@@ -111,19 +111,6 @@
   <h2 class="font-display font-bold text-3xl text-center mb-4">Simple, Transparent Pricing</h2>
   <p class="text-center text-muted mb-4">Start free, upgrade when you need more.</p>
   
-  <!-- Currency Selector -->
-  <div class="flex justify-center gap-2 mb-8">
-    <button onclick="setCurrency('USD')" class="currency-btn px-4 py-1.5 rounded-md border border-line text-sm hover:bg-paper transition-colors bg-fritt text-white border-fritt" data-currency="USD">
-      🇺🇸 USD
-    </button>
-    <button onclick="setCurrency('GBP')" class="currency-btn px-4 py-1.5 rounded-md border border-line text-sm hover:bg-paper transition-colors" data-currency="GBP">
-      🇬🇧 GBP
-    </button>
-    <button onclick="setCurrency('NGN')" class="currency-btn px-4 py-1.5 rounded-md border border-line text-sm hover:bg-paper transition-colors" data-currency="NGN">
-      🇳🇬 NGN
-    </button>
-  </div>
-  
   <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
     <!-- Free Tier -->
     <div class="border border-line rounded-xl p-8 text-center">
@@ -139,22 +126,29 @@
     </div>
     
     <!-- Pro Tier -->
-    <div class="border-2 border-fritt rounded-xl p-8 text-center relative">
-      <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-fritt text-white text-xs font-medium px-3 py-1 rounded-full">Popular</span>
-      <h3 class="font-display font-bold text-xl mb-2">Pro</h3>
-      <p class="text-3xl font-bold text-fritt mb-1">
-        <span id="pro-monthly">$4.99</span>
+    <div class="bg-white border-2 border-fritt rounded-xl p-8 text-center">
+      <div
+        class="inline-block bg-fritt text-white text-xs font-medium px-3 py-1 rounded-full mb-2"
+      >
+        Most Popular
+      </div>
+      <h3 class="font-display font-bold text-lg mb-2">Pro</h3>
+      <p class="text-3xl font-bold mb-2">
+        {{ pricing.currency }}{{ pricing.monthly }}
       </p>
-      <p class="text-sm text-muted mb-1">Per month</p>
+      <p class="text-muted text-sm mb-1">Per month</p>
       <p class="text-xs text-muted mb-6">
-        or <span id="pro-yearly">$49.99</span> per year
+        or {{ pricing.currency }}{{ pricing.yearly }} per year
       </p>
       <ul class="text-left text-sm space-y-2 mb-6">
         <li class="flex items-center gap-2">✅ Unlimited documents</li>
         <li class="flex items-center gap-2">✅ Everything in Free</li>
         <li class="flex items-center gap-2">✅ Priority support</li>
       </ul>
-      <button class="block w-full py-2 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors opacity-50 cursor-not-allowed" disabled>
+      <button
+        class="w-full py-2 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors opacity-50 cursor-not-allowed"
+        disabled
+      >
         Coming Soon
       </button>
       <p class="text-xs text-muted mt-2">Beta — Free until launch</p>
