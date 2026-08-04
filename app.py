@@ -274,11 +274,11 @@ def get_status(expiry_date_str):
     today = datetime.today().date()
     days_left = (expiry_date - today).days
 
-    if days_left > 365:
+    if days_left > 120:
         return days_left, "Safe", "blue", "🟦"
-    elif days_left > 180:
+    elif days_left >= 60:
         return days_left, "Good", "green", "🟢"
-    elif days_left > 90:
+    elif days_left >= 15:
         return days_left, "Warning", "orange", "🟠"
     elif days_left >= 0:
         return days_left, "Urgent", "red", "🔴"
@@ -841,6 +841,14 @@ def terms():
 @app.route("/privacy")
 def privacy():
     return render_template("legal/privacy.html")
+
+@app.route("/renewed/<int:doc_id>")
+def mark_renewed(doc_id):
+    """Mark a document as renewed and set a new expiry date."""
+    # Get the document
+    # Show a simple form to set new expiry date
+    # Update expiry_date and reset reminder state
+    pass
 
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your

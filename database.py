@@ -121,6 +121,16 @@ def init_db():
         # If you want to see the actual error details
         # raise
 
+    try:
+        cursor.execute("""
+            ALTER TABLE documents ADD COLUMN last_reminder_sent DATE;
+            ALTER TABLE documents ADD COLUMN reminder_state TEXT; -- warning, urgent, critical, expired
+            ALTER TABLE documents ADD COLUMN snoozed_until DATE;
+        """)
+    except Exception as e:
+        print(f"Could not add columns last_reminder_sent, reminder_state, snoozed_until: {e}")
+
+
     conn.commit()
     cursor.close()
     conn.close()
