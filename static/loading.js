@@ -39,6 +39,11 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   document.querySelectorAll('a[href^="/"]').forEach(function (link) {
+    // Skip links that have a download attribute (file downloads)
+    if (link.hasAttribute('download')) {
+      return;
+    }
+
     link.addEventListener("click", function (e) {
       // Skip if the user is opening it in a new tab/window, or if the
       // link's own handler already cancelled the navigation (e.g. the
