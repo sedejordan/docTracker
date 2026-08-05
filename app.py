@@ -40,6 +40,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask import flash
 import subprocess
+import csv
+import io
 
 from database import init_db, get_db
 
@@ -914,7 +916,103 @@ def run_reminders():
         return "✅ Reminders sent successfully.", 200
     except Exception as e:
         return f"❌ Reminders failed: {str(e)}", 500
-    
+
+@app.route("/import-csv", methods=["GET", "POST"])
+def import_csv():
+    auth = require_login()
+    if auth:
+        return auth
+
+    error = None
+
+    if request.method == "POST":
+        if 'csv_file' not in request.files:
+            error = "Please upload a CSV file."
+        else:
+            file = request.files['csv_file']
+            
+            if file.filename == '':
+                error = "No file selected."
+            elif not file.filename.lower().endswith('.csv'):
+                error = "Please upload a CSV file (.csv)."
+            else:
+                try:
+                    stream = io.StringIO(file.stream.read().decode("UTF-8"), newline=None)
+                    csv_input = csv.reader(stream)
+                    
+                    headers = [h.strip().lower().replace(' ', '_') for h in next(csv_input)]
+                    
+                    title_match = None
+                    expiry_match = None
+                    
+                    for i, h in enumerate(headers):
+                        if h in ['title', 'document', 'document_title', 'doc_title', 'name']:
+                            title_match = i
+                        if h in ['expiry_date', 'expiry', 'expiration', 'expiration_date']:
+                            expiry_match = i
+                    
+                    if title_match is None:
+                        error = f"CSV must have a 'title' column. Found: {', '.join(headers)}"
+                    elif expiry_match is None:
+                        error = f"CSV must have an 'expiry_date' column. Found: {', '.join(headers)}"
+                    else:
+                        conn = get_db()
+                        cursor = conn.cursor()
+                        added = 0
+                        failed = 0
+                        
+                        for row in csv_input:
+                            if not row or all(cell.strip() == '' for cell in row):
+                                continue
+                            
+                            title = row[title_match].strip() if len(row) > title_match else ""
+                            expiry_date = row[expiry_match].strip() if len(row) > expiry_match else ""
+                            
+                            if not title or not expiry_date:
+                                failed += 1
+                                continue
+                            
+                            try:
+                                datetime.strptime(expiry_date, "%Y-%m-%d")
+                            except ValueError:
+                                try:
+                                    parsed = datetime.strptime(expiry_date, "%d/%m/%Y")
+                                    expiry_date = parsed.strftime("%Y-%m-%d")
+                                except ValueError:
+                                    try:
+                                        parsed = datetime.strptime(expiry_date, "%m/%d/%Y")
+                                        expiry_date = parsed.strftime("%Y-%m-%d")
+                                    except ValueError:
+                                        failed += 1
+                                        continue
+                            
+                            try:
+                                cursor.execute(
+                                    "INSERT INTO documents (title, expiry_date, user_id) VALUES (%s, %s, %s)",
+                                    (title, expiry_date, session["user_id"])
+                                )
+                                added += 1
+                            except Exception:
+                                failed += 1
+                        
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                        
+                        if added > 0:
+                            flash(f"✅ Successfully imported {added} documents! {failed} failed.", "success")
+                        else:
+                            flash(f"⚠️ No documents imported. {failed} rows had errors.", "error")
+                            
+                        return redirect("/")
+                        
+                except csv.Error as e:
+                    error = f"CSV error: {str(e)}"
+                except Exception as e:
+                    error = f"Error reading file: {str(e)}"
+
+    return render_template("import_csv.html", error=error)
+
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your
     # custom error pages instead of the interactive debugger.

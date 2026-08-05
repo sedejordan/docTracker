@@ -4,6 +4,11 @@
 <div class="max-w-md mx-auto bg-white border border-line rounded-xl p-8 shadow-sm">
   <h2 class="font-display font-bold text-xl mb-6">Add Document</h2>
 
+  <div class="bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-md px-3 py-2 mb-4 flex items-center justify-between">
+    <span>Have many documents? 📥</span>
+    <a href="/import-csv" class="text-fritt font-medium hover:underline">Import from CSV →</a>
+  </div>
+
   {% if error %}
     <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2 mb-4">{{ error }}</div>
   {% endif %}
