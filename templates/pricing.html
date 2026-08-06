@@ -36,7 +36,6 @@
     <div class="text-center py-12">
         <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h1>
         <p class="text-xl text-gray-600">Choose the plan that works best for you</p>
-        <p class="text-sm text-gray-500 mt-2">Pricing shown in {{ pricing.region_name }}</p>
         
         {% if session.get('user_id') %}
             <div class="mt-4 inline-block bg-blue-50 border border-blue-200 rounded-lg px-6 py-3">
@@ -195,7 +194,7 @@
                     <ul class="mt-6 space-y-3">
                         <li class="flex items-center text-gray-600">
                             <i class="fas fa-check text-green-500 mr-2"></i>
-                            <strong>Unlimited</strong> documents
+                            <strong>Unlimited </strong> documents
                         </li>
                         <li class="flex items-center text-gray-600">
                             <i class="fas fa-check text-green-500 mr-2"></i>
