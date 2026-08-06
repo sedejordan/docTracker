@@ -897,6 +897,8 @@ def get_pricing(region='us'):
             'yearly_raw': 25000,
             'vip_monthly': '7,500',
             'vip_yearly': '75,000',
+            'vip_monthly_raw': 7500,
+            'vip_yearly_raw': 75000,
             'region_name': 'Nigeria'
         },
         'uk': {
@@ -907,6 +909,8 @@ def get_pricing(region='us'):
             'yearly_raw': 39.99,
             'vip_monthly': '11.99',
             'vip_yearly': '119.99',
+            'vip_monthly_raw': 11.99,
+            'vip_yearly_raw': 119.99,
             'region_name': 'United Kingdom'
         },
         'us': {
@@ -917,6 +921,8 @@ def get_pricing(region='us'):
             'yearly_raw': 49.99,
             'vip_monthly': '14.99',
             'vip_yearly': '149.99',
+            'vip_monthly_raw': 14.99,
+            'vip_yearly_raw': 149.99,
             'region_name': 'Worldwide'
         }
     }
