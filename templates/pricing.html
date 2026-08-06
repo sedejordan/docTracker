@@ -4,6 +4,12 @@
     <title>Pricing - Fritt Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .bg-fritt { background-color: #2563eb; }
+        .border-fritt { border-color: #2563eb; }
+        .text-fritt { color: #2563eb; }
+        .hover\:bg-fritt-dark:hover { background-color: #1d4ed8; }
+    </style>
 </head>
 <body class="bg-gray-50">
     <!-- Navigation -->
@@ -21,6 +27,7 @@
     <div class="text-center py-12">
         <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h1>
         <p class="text-xl text-gray-600">Choose the plan that works best for you</p>
+        <p class="text-sm text-gray-500 mt-2">Pricing shown in {{ pricing.region_name }}</p>
     </div>
 
     <!-- Pricing Cards -->
@@ -32,7 +39,7 @@
                     <h2 class="text-2xl font-bold text-gray-800">Free</h2>
                     <p class="text-gray-500 mt-1">Perfect for getting started</p>
                     <div class="mt-4">
-                        <span class="text-4xl font-bold">$0</span>
+                        <span class="text-4xl font-bold">{{ pricing.currency }}0</span>
                         <span class="text-gray-500">/month</span>
                     </div>
                     <ul class="mt-6 space-y-3">
@@ -46,7 +53,11 @@
                         </li>
                         <li class="flex items-center text-gray-600">
                             <i class="fas fa-check text-green-500 mr-2"></i>
-                            Basic tracking
+                            Status indicators
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Search and filter
                         </li>
                         <li class="flex items-center text-gray-400">
                             <i class="fas fa-times mr-2"></i>
@@ -68,9 +79,9 @@
                     <h2 class="text-2xl font-bold text-gray-800">Pro</h2>
                     <p class="text-gray-500 mt-1">For serious document management</p>
                     <div class="mt-4">
-                        <span class="text-4xl font-bold">$4.99</span>
+                        <span class="text-4xl font-bold">{{ pricing.currency }}{{ pricing.monthly }}</span>
                         <span class="text-gray-500">/month</span>
-                        <p class="text-sm text-gray-500 mt-1">or $49.99/year (save 16%)</p>
+                        <p class="text-sm text-gray-500 mt-1">or {{ pricing.currency }}{{ pricing.yearly }}/year (save 16%)</p>
                     </div>
                     <ul class="mt-6 space-y-3">
                         <li class="flex items-center text-gray-600">
@@ -93,33 +104,37 @@
                             <i class="fas fa-check text-green-500 mr-2"></i>
                             Advanced tracking
                         </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Bulk operations
+                        </li>
                     </ul>
-                    <a href="{{ url_for('register') }}" class="block mt-6 text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Start Free Trial</a>
+                    <button class="block w-full mt-6 text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition opacity-50 cursor-not-allowed" disabled>
+                        Coming Soon
+                    </button>
+                    <p class="text-xs text-gray-500 text-center mt-2">Beta — Free until launch</p>
                 </div>
             </div>
 
-            <!-- Business Plan -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition">
+            <!-- VIP Plan -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition border-2 border-purple-500">
+                <div class="bg-purple-600 text-white text-center py-2 text-sm font-semibold">BEST VALUE</div>
                 <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-800">Business</h2>
+                    <h2 class="text-2xl font-bold text-gray-800">VIP</h2>
                     <p class="text-gray-500 mt-1">For teams and power users</p>
                     <div class="mt-4">
-                        <span class="text-4xl font-bold">$14.99</span>
+                        <span class="text-4xl font-bold text-purple-600">{{ pricing.currency }}{{ pricing.vip_monthly or '14.99' }}</span>
                         <span class="text-gray-500">/month</span>
-                        <p class="text-sm text-gray-500 mt-1">or $149.99/year (save 16%)</p>
+                        <p class="text-sm text-gray-500 mt-1">or {{ pricing.currency }}{{ pricing.vip_yearly or '149.99' }}/year (save 16%)</p>
                     </div>
                     <ul class="mt-6 space-y-3">
                         <li class="flex items-center text-gray-600">
                             <i class="fas fa-check text-green-500 mr-2"></i>
-                            500 documents
+                            <strong>Unlimited</strong> documents
                         </li>
                         <li class="flex items-center text-gray-600">
                             <i class="fas fa-check text-green-500 mr-2"></i>
-                            Email reminders
-                        </li>
-                        <li class="flex items-center text-gray-600">
-                            <i class="fas fa-check text-green-500 mr-2"></i>
-                            CSV import
+                            All Pro features
                         </li>
                         <li class="flex items-center text-gray-600">
                             <i class="fas fa-check text-green-500 mr-2"></i>
@@ -131,10 +146,17 @@
                         </li>
                         <li class="flex items-center text-gray-600">
                             <i class="fas fa-check text-green-500 mr-2"></i>
-                            Team management
+                            API access
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Team sharing
                         </li>
                     </ul>
-                    <a href="{{ url_for('register') }}" class="block mt-6 text-center bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition">Contact Sales</a>
+                    <button class="block w-full mt-6 text-center bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition opacity-50 cursor-not-allowed" disabled>
+                        Coming Soon
+                    </button>
+                    <p class="text-xs text-gray-500 text-center mt-2">Beta — Free until launch</p>
                 </div>
             </div>
         </div>
@@ -154,6 +176,10 @@
                 <div class="bg-white rounded-lg p-6 shadow-sm">
                     <h3 class="font-semibold text-gray-800">Is there a free trial?</h3>
                     <p class="text-gray-600 mt-2">All paid plans come with a 14-day free trial. No credit card required to start.</p>
+                </div>
+                <div class="bg-white rounded-lg p-6 shadow-sm">
+                    <h3 class="font-semibold text-gray-800">Do you offer regional pricing?</h3>
+                    <p class="text-gray-600 mt-2">Yes! We offer region-specific pricing in Nigeria (₦), UK (£), and US ($) to make our service accessible worldwide.</p>
                 </div>
             </div>
         </div>
