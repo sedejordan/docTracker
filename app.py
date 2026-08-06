@@ -43,7 +43,7 @@ import io
 import json
 from functools import lru_cache
 import time
-from rave_python import Rave
+# from rave_python import Rave
 import hashlib
 import hmac
 
@@ -127,10 +127,10 @@ limiter = Limiter(
 )
 
 # Initialize Flutterwave
-rave = Rave(
-    os.getenv("FLW_PUBLIC_KEY"),
-    os.getenv("FLW_SECRET_KEY")
-)
+# rave = Rave(
+#     os.getenv("FLW_PUBLIC_KEY"),
+#     os.getenv("FLW_SECRET_KEY")
+# )
 
 # Subscription tiers
 SUBSCRIPTION_TIERS = {
@@ -1949,13 +1949,13 @@ def initiate_payment():
         base_url = os.environ.get("APP_URL", "tracker.fritt.org")
         redirect_url = f"https://{base_url}{url_for('payment_callback')}"
         
-        # Initialize payment with Flutterwave using the correct syntax
+        # Prepare the payload
         payload = {
             'amount': str(amount),
             'email': session['email'],
             'currency': currency,
             'tx_ref': f"fritt_{session['user_id']}_{int(time.time())}",
-            'payment_plan': int(plan_id),  # Enables subscription
+            'payment_plan': int(plan_id),
             'redirect_url': redirect_url,
             'meta': {
                 'user_id': session['user_id'],
@@ -1964,29 +1964,51 @@ def initiate_payment():
             }
         }
         
-        # Use the correct rave_python method
-        response = rave.Payment.initialize(payload)
+        # Log the payload for debugging
+        print(f"🔍 Sending payment request: {payload}")
         
-        # Store transaction reference in session
-        if response and 'data' in response:
-            session['tx_ref'] = response['data']['tx_ref']
-            # Redirect to Flutterwave checkout
-            return redirect(response['data']['link'])
+        # Make the API call directly to Flutterwave
+        response = requests.post(
+            'https://api.flutterwave.com/v3/payments',
+            headers={
+                'Authorization': f'Bearer {os.getenv("FLW_SECRET_KEY")}',
+                'Content-Type': 'application/json'
+            },
+            json=payload,
+            timeout=30
+        )
+        
+        # Log the response for debugging
+        print(f"📨 Flutterwave response status: {response.status_code}")
+        print(f"📨 Flutterwave response: {response.text[:500]}...")
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                # Store transaction reference in session
+                session['tx_ref'] = data['data']['tx_ref']
+                # Redirect to Flutterwave checkout
+                return redirect(data['data']['link'])
+            else:
+                error_message = data.get('message', 'Unknown error')
+                print(f"❌ Flutterwave error: {error_message}")
+                flash(f"Payment initialization failed: {error_message}", "error")
+                return redirect(url_for("pricing"))
         else:
-            raise Exception("Invalid response from Flutterwave")
+            print(f"❌ HTTP Error: {response.status_code}")
+            flash("Payment initialization failed. Please try again.", "error")
+            return redirect(url_for("pricing"))
         
     except Exception as e:
-        print(f"Payment error: {e}")
-        print(f"Error details: {str(e)}")
+        print(f"❌ Payment error: {e}")
         import traceback
         traceback.print_exc()
-        flash(f"Payment initialization failed: {str(e)}", "error")
+        flash("Payment initialization failed. Please try again.", "error")
         return redirect(url_for("pricing"))
-
+    
 @app.route("/payment/callback")
 def payment_callback():
     """Handle payment callback from Flutterwave."""
-    # Use require_verified instead of @login_required
     auth = require_verified()
     if auth:
         return auth
@@ -1999,55 +2021,72 @@ def payment_callback():
         return redirect(url_for("pricing"))
     
     try:
-        # Verify payment status
-        response = rave.Transaction.verify(transaction_id)
+        # Verify payment status with Flutterwave API
+        response = requests.get(
+            f'https://api.flutterwave.com/v3/transactions/{transaction_id}/verify',
+            headers={
+                'Authorization': f'Bearer {os.getenv("FLW_SECRET_KEY")}',
+                'Content-Type': 'application/json'
+            },
+            timeout=30
+        )
         
-        if response['data']['status'] == 'successful':
-            # Payment successful - update user subscription
-            user_id = session['user_id']
+        if response.status_code == 200:
+            data = response.json()
             
-            # Get plan_type from meta
-            plan_type = response['data'].get('meta', {}).get('plan_type', '')
-            
-            if not plan_type:
-                # Try to get from payment plan
-                payment_plan = response['data'].get('payment_plan', {})
-                plan_name = payment_plan.get('name', '')
-                if 'Pro' in plan_name:
-                    plan_type = 'pro_monthly' if 'Monthly' in plan_name else 'pro_yearly'
-                elif 'VIP' in plan_name:
-                    plan_type = 'vip_monthly' if 'Monthly' in plan_name else 'vip_yearly'
-            
-            # Extract tier from plan_type (pro_monthly → pro)
-            tier = plan_type.split('_')[0] if plan_type else 'pro'
-            
-            # Update user subscription in database
-            conn = get_db()
-            try:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE users 
-                    SET subscription_tier = %s,
-                        subscription_status = 'active',
-                        subscription_expiry = NULL
-                    WHERE id = %s
-                """, (tier, user_id))
-                conn.commit()
-                cursor.close()
-            finally:
-                put_db(conn)
-            
-            flash("✅ Payment successful! Your subscription is now active.", "success")
-            return redirect(url_for("home"))
+            if data.get('status') == 'success' and data['data']['status'] == 'successful':
+                # Payment successful - update user subscription
+                user_id = session['user_id']
+                
+                # Get plan_type from meta
+                meta = data['data'].get('meta', {})
+                plan_type = meta.get('plan_type', '')
+                
+                if not plan_type:
+                    # Try to get from payment plan
+                    payment_plan = data['data'].get('payment_plan', {})
+                    plan_name = payment_plan.get('name', '')
+                    if 'Pro' in plan_name:
+                        plan_type = 'pro_monthly' if 'Monthly' in plan_name else 'pro_yearly'
+                    elif 'VIP' in plan_name:
+                        plan_type = 'vip_monthly' if 'Monthly' in plan_name else 'vip_yearly'
+                
+                # Extract tier from plan_type (pro_monthly → pro)
+                tier = plan_type.split('_')[0] if plan_type else 'pro'
+                
+                # Update user subscription in database
+                conn = get_db()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE users 
+                        SET subscription_tier = %s,
+                            subscription_status = 'active',
+                            subscription_expiry = NULL
+                        WHERE id = %s
+                    """, (tier, user_id))
+                    conn.commit()
+                    cursor.close()
+                    print(f"✅ User {user_id} upgraded to {tier}")
+                finally:
+                    put_db(conn)
+                
+                flash("✅ Payment successful! Your subscription is now active.", "success")
+                return redirect(url_for("home"))
+            else:
+                flash("Payment failed. Please try again.", "error")
+                return redirect(url_for("pricing"))
         else:
-            flash("Payment failed. Please try again.", "error")
+            flash("Error verifying payment. Please contact support.", "error")
             return redirect(url_for("pricing"))
             
     except Exception as e:
-        print(f"Callback error: {e}")
+        print(f"❌ Callback error: {e}")
+        import traceback
+        traceback.print_exc()
         flash("Error verifying payment. Please contact support.", "error")
         return redirect(url_for("pricing"))
-
+    
 @app.route("/payment/cancel")
 def payment_cancel():
     """Handle payment cancellation."""
