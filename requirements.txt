@@ -5,3 +5,4 @@ requests
 flask-wtf
 flask-limiter
 sentry-sdk
+rave_python==1.4.2

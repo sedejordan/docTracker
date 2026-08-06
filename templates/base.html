@@ -6,8 +6,9 @@
   <title>{% block title %}Fritt Tracker{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="/static/fritt-tracker-logo.svg">
 
+  <!-- Font: Space Grotesk (display) + Inter (body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"> <!--i thought we already got the fonts in the previous line what's the use of this one-->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -36,14 +37,10 @@
     🚀 Beta — Free while we test. <span class="opacity-75">Your feedback shapes the product.</span>
   </div>
 
-  <!-- Loading overlay: shown by loading.js on form submits and internal
-       link clicks. This is the Fritt Tracker icon itself (document +
-       progress ring) with the ring animating from empty to full - same
-       grey-to-blue fill idea as the document status badges elsewhere in
-       the app, just circular instead of linear. Inlined directly (not
-       an <img>) so loading.js can animate the ring's stroke-dashoffset. -->
+  <!-- Loading overlay -->
   <div id="loading-overlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-paper/90 backdrop-blur-sm">
     <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs>
         <linearGradient id="frittGradientLoading" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#2C5FEF"/>
           <stop offset="100%" stop-color="#22D3C9"/>
@@ -62,28 +59,53 @@
     <p class="mt-4 font-display text-sm tracking-wide text-muted">FRITT TRACKER</p>
   </div>
 
-    <header class="bg-white border-b border-line">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2">
-        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
-        <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
-      </a>
-      
-      {% if session.get("user_id") %}
-        <!-- Logged-in navigation -->
-        <nav class="flex flex-wrap gap-2">
-          <a href="/add" class="px-3 py-1.5 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
-          <a href="/import-csv" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">📥 Import CSV</a>
-          <a href="/change-password" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>
-          <a href="/logout" class="px-3 py-1.5 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Logout</a>
-        </nav>
-      {% else %}
-        <!-- Logged-out navigation -->
-        <div class="flex gap-3">
-          <a href="/login" class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors">Log In</a>
-          <a href="/register" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">Sign Up Free</a>
-        </div>
-      {% endif %}
+  <!-- HEADER: Mobile-first responsive navigation -->
+  <header class="bg-white border-b border-line">
+    <div class="max-w-6xl mx-auto px-4 py-4">
+      <!-- Logo row: visible on all screens -->
+      <div class="flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 shrink-0">
+          <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
+          <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
+        </a>
+        
+        <!-- Mobile menu toggle (only visible on small screens) -->
+        <button 
+          id="mobile-menu-toggle"
+          class="lg:hidden p-2 rounded-md hover:bg-paper transition-colors focus:outline-none focus:ring-2 focus:ring-fritt"
+          aria-label="Toggle menu"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="menu-icon-open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            <path id="menu-icon-close" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" class="hidden"/>
+          </svg>
+        </button>
+
+        <!-- Logged-out desktop buttons (hidden on mobile) -->
+        {% if not session.get("user_id") %}
+          <div class="hidden lg:flex gap-3">
+            <a href="/login" class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors">Log In</a>
+            <a href="/register" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">Sign Up Free</a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Mobile/Desktop navigation menu -->
+      <nav id="main-nav" class="hidden lg:flex lg:flex-wrap lg:gap-2 mt-4 lg:mt-0 border-t lg:border-t-0 pt-4 lg:pt-0">
+        {% if session.get("user_id") %}
+          <!-- Logged-in navigation items -->
+          <a href="/add" class="block lg:inline-block px-3 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors text-center">+ Add Document</a>
+          <a href="/import-csv" class="block lg:inline-block px-3 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors text-center">📥 Import CSV</a>
+          <a href="/change-password" class="block lg:inline-block px-3 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors text-center">Change Password</a>
+          <a href="/logout" class="block lg:inline-block px-3 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors text-center">Logout</a>
+        {% else %}
+          <!-- Logged-out mobile items (hidden on desktop) -->
+          <div class="flex flex-col lg:hidden gap-2 w-full">
+            <a href="/login" class="block px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors text-center">Log In</a>
+            <a href="/register" class="block px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors text-center">Sign Up Free</a>
+          </div>
+        {% endif %}
+      </nav>
     </div>
   </header>
 
@@ -116,8 +138,27 @@
 
   <script src="/static/loading.js"></script>
   <script>
-    // Consolidated DOM ready
+    // Mobile menu toggle
     document.addEventListener("DOMContentLoaded", function () {
+      const toggle = document.getElementById('mobile-menu-toggle');
+      const nav = document.getElementById('main-nav');
+      const iconOpen = document.getElementById('menu-icon-open');
+      const iconClose = document.getElementById('menu-icon-close');
+      
+      if (toggle && nav) {
+        toggle.addEventListener('click', function() {
+          const isOpen = nav.classList.contains('hidden');
+          nav.classList.toggle('hidden');
+          nav.classList.toggle('flex');
+          
+          // Toggle icon visibility
+          if (iconOpen && iconClose) {
+            iconOpen.classList.toggle('hidden');
+            iconClose.classList.toggle('hidden');
+          }
+        });
+      }
+
       // Auto-focus the first field
       const first = document.querySelector("[autofocus]");
       if (first) first.focus();

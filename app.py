@@ -43,6 +43,7 @@ import io
 #import json
 from functools import lru_cache
 import time
+from rave_python import Rave
 
 from database import init_db, get_db
 
@@ -121,6 +122,12 @@ limiter = Limiter(
     # lets tests turn this off before app.py is even imported - see
     # tests/conftest.py.
     enabled=os.environ.get("DISABLE_RATE_LIMITING", "false").lower() != "true"
+)
+
+# Initialize Flutterwave
+rave = Rave(
+    os.getenv("FLW_PUBLIC_KEY"),
+    os.getenv("FLW_SECRET_KEY")
 )
 
 # Subscription tiers
@@ -822,6 +829,23 @@ def get_user_region():
     
     return 'us'  # Fallback
 
+def validate_password_strength(password):
+    """Check if password meets complexity requirements."""
+    errors = []
+    
+    if len(password) < 8:
+        errors.append("At least 8 characters")
+    if not any(c.isupper() for c in password):
+        errors.append("An uppercase letter")
+    if not any(c.islower() for c in password):
+        errors.append("A lowercase letter")
+    if not any(c.isdigit() for c in password):
+        errors.append("A number")
+    if not any(c in "!@#$%^&*()_+-=[]{}|;:',.<>?/~`" for c in password):
+        errors.append("A symbol")
+    
+    return errors
+
 # Get user pricing
 def get_pricing(region='us'):
     """Return pricing based on region."""
@@ -866,6 +890,31 @@ def log_slow_query(query, params=None, threshold=0.1):
     duration = time.time() - start
     if duration > threshold:
         print(f"SLOW QUERY ({duration:.3f}s): {query[:100]}...")
+
+# Get the plan ID based on plan type and currency
+def get_plan_id(plan_type, currency):
+    """Get the appropriate plan ID based on plan type and currency."""
+    # Map plan type and currency to environment variable
+    plan_map = {
+        'pro_monthly': f"FLW_PRO_MONTHLY_{currency}_PLAN",
+        'pro_yearly': f"FLW_PRO_YEARLY_{currency}_PLAN",
+        'vip_monthly': f"FLW_VIP_MONTHLY_{currency}_PLAN",
+        'vip_yearly': f"FLW_VIP_YEARLY_{currency}_PLAN",
+    }
+    
+    var_name = plan_map.get(plan_type)
+    if var_name:
+        return os.getenv(var_name)
+    return None
+
+def get_currency_for_region(region):
+    """Map region to currency code."""
+    currency_map = {
+        'ng': 'NGN',
+        'uk': 'GBP',
+        'us': 'USD'
+    }
+    return currency_map.get(region, 'USD')
 
 # --- CUSTOM ERROR PAGES ---
 # These replace Flask's default debug/error pages with branded versions
@@ -1145,10 +1194,9 @@ def register():
         email = request.form["email"].strip().lower()
         password = request.form["password"]
 
-        if not email or not password:
-            error = "Please fill in all fields"
-        elif len(password) < 8:
-            error = "Password must be at least 8 characters"
+        password_errors = validate_password_strength(password)
+        if password_errors:
+            error = f"Password must contain: {', '.join(password_errors)}"
         else:
             conn = get_db()
             try:
@@ -1665,30 +1713,236 @@ def import_csv():
 
     return render_template("import_csv.html", error=error)
 
-@app.route("/subscribe", methods=["POST"])
-@limiter.limit("5 per hour")
-def subscribe_newsletter():
-    email = request.form.get("email", "").strip().lower()
+# @app.route("/subscribe", methods=["POST"])
+# @limiter.limit("5 per hour")
+# def subscribe_newsletter():
+#     email = request.form.get("email", "").strip().lower()
     
-    if not email:
-        flash("Please enter your email address.", "error")
-        return redirect(url_for("home"))
+#     if not email:
+#         flash("Please enter your email address.", "error")
+#         return redirect(url_for("home"))
     
-    # Store in newsletter_subscribers table
-    conn = get_db()
+#     # Store in newsletter_subscribers table
+#     conn = get_db()
+#     try:
+#         cursor = conn.cursor()
+#         cursor.execute(
+#             "INSERT INTO newsletter_subscribers (email, subscribed_at) VALUES (%s, %s) ON CONFLICT (email) DO NOTHING",
+#             (email, datetime.now(timezone.utc))
+#         )
+#         conn.commit()
+#         cursor.close()
+#     finally:
+#         conn.close()
+    
+#     flash("✅ Thanks for subscribing! You'll hear from us soon.", "success")
+#     return redirect(url_for("home"))
+
+
+@app.route("/subscribe/<plan_type>")
+def subscribe(plan_type):
+    """Show payment page for subscription."""
+    # Use require_verified instead of @login_required
+    auth = require_verified()
+    if auth:
+        return auth
+    
+    user_id = session['user_id']
+    user_email = session['email']
+    
+    # Get user's region and currency
+    region = get_user_region()
+    currency = get_currency_for_region(region)
+    
+    # Get the plan ID for this type and currency
+    plan_id = get_plan_id(plan_type, currency)
+    
+    if not plan_id:
+        flash(f"Payment plan not available for your region ({region}). Please contact support.", "error")
+        return redirect(url_for("pricing"))
+    
+    # Get region-specific pricing
+    pricing = get_pricing(region)
+    
+    # Get plan details for display
+    plan_details = {
+        'pro_monthly': {'name': 'Pro Monthly', 'price': pricing['monthly'], 'tier': 'Pro'},
+        'pro_yearly': {'name': 'Pro Yearly', 'price': pricing['yearly'], 'tier': 'Pro'},
+        'vip_monthly': {'name': 'VIP Monthly', 'price': pricing['vip_monthly'], 'tier': 'VIP'},
+        'vip_yearly': {'name': 'VIP Yearly', 'price': pricing['vip_yearly'], 'tier': 'VIP'},
+    }
+    
+    if plan_type not in plan_details:
+        flash("Invalid plan selected.", "error")
+        return redirect(url_for("pricing"))
+    
+    return render_template(
+        "subscribe.html",
+        plan_type=plan_type,
+        plan_id=plan_id,
+        plan_details=plan_details[plan_type],
+        pricing=pricing,
+        currency=currency,
+        user_email=user_email
+    )
+
+@app.route("/payment/initiate", methods=["POST"])
+def initiate_payment():
+    """Initialize Flutterwave payment."""
+    # Use require_verified instead of @login_required
+    auth = require_verified()
+    if auth:
+        return auth
+    
+    plan_id = request.form.get("plan_id")
+    plan_type = request.form.get("plan_type")
+    
+    if not plan_id or not plan_type:
+        flash("Invalid payment request.", "error")
+        return redirect(url_for("pricing"))
+    
+    # Get user's region and currency
+    region = get_user_region()
+    currency = get_currency_for_region(region)
+    pricing = get_pricing(region)
+    
+    # Map plan type to amount based on region
+    amount_map = {
+        'pro_monthly': pricing['monthly_raw'],
+        'pro_yearly': pricing['yearly_raw'],
+        'vip_monthly': pricing['vip_monthly_raw'],
+        'vip_yearly': pricing['vip_yearly_raw'],
+    }
+    
+    amount = amount_map.get(plan_type, 0)
+    if amount <= 0:
+        flash("Invalid payment amount.", "error")
+        return redirect(url_for("pricing"))
+    
     try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO newsletter_subscribers (email, subscribed_at) VALUES (%s, %s) ON CONFLICT (email) DO NOTHING",
-            (email, datetime.now(timezone.utc))
-        )
-        conn.commit()
-        cursor.close()
-    finally:
-        conn.close()
+        # Initialize payment with Flutterwave
+        response = rave.Payment.initialize({
+            'amount': amount,
+            'email': session['email'],
+            'currency': currency,
+            'tx_ref': f"fritt_{session['user_id']}_{int(time.time())}",
+            'payment_plan': int(plan_id),  # Enables subscription
+            'redirect_url': url_for('payment_callback', _external=True),
+            'meta': {
+                'user_id': session['user_id'],
+                'plan_type': plan_type,
+                'region': region
+            }
+        })
+        
+        # Store transaction reference in session
+        session['tx_ref'] = response['data']['tx_ref']
+        
+        # Redirect to Flutterwave checkout
+        return redirect(response['data']['link'])
+        
+    except Exception as e:
+        print(f"Payment error: {e}")
+        flash("Payment initialization failed. Please try again.", "error")
+        return redirect(url_for("pricing"))
+
+@app.route("/payment/callback")
+def payment_callback():
+    """Handle payment callback from Flutterwave."""
+    # Use require_verified instead of @login_required
+    auth = require_verified()
+    if auth:
+        return auth
     
-    flash("✅ Thanks for subscribing! You'll hear from us soon.", "success")
-    return redirect(url_for("home"))
+    tx_ref = request.args.get('tx_ref')
+    transaction_id = request.args.get('transaction_id')
+    
+    if not tx_ref or not transaction_id:
+        flash("Invalid payment callback.", "error")
+        return redirect(url_for("pricing"))
+    
+    try:
+        # Verify payment status
+        response = rave.Transaction.verify(transaction_id)
+        
+        if response['data']['status'] == 'successful':
+            # Payment successful - update user subscription
+            user_id = session['user_id']
+            
+            # Get plan_type from meta
+            plan_type = response['data'].get('meta', {}).get('plan_type', '')
+            
+            if not plan_type:
+                # Try to get from payment plan
+                payment_plan = response['data'].get('payment_plan', {})
+                plan_name = payment_plan.get('name', '')
+                if 'Pro' in plan_name:
+                    plan_type = 'pro_monthly' if 'Monthly' in plan_name else 'pro_yearly'
+                elif 'VIP' in plan_name:
+                    plan_type = 'vip_monthly' if 'Monthly' in plan_name else 'vip_yearly'
+            
+            # Extract tier from plan_type (pro_monthly → pro)
+            tier = plan_type.split('_')[0] if plan_type else 'pro'
+            
+            # Update user subscription in database
+            conn = get_db()
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users 
+                    SET subscription_tier = %s,
+                        subscription_status = 'active',
+                        subscription_expiry = NULL
+                    WHERE id = %s
+                """, (tier, user_id))
+                conn.commit()
+                cursor.close()
+            finally:
+                conn.close()
+            
+            flash("✅ Payment successful! Your subscription is now active.", "success")
+            return redirect(url_for("home"))
+        else:
+            flash("Payment failed. Please try again.", "error")
+            return redirect(url_for("pricing"))
+            
+    except Exception as e:
+        print(f"Callback error: {e}")
+        flash("Error verifying payment. Please contact support.", "error")
+        return redirect(url_for("pricing"))
+
+@app.route("/payment/cancel")
+def payment_cancel():
+    """Handle payment cancellation."""
+    # Use require_verified instead of @login_required
+    auth = require_verified()
+    if auth:
+        return auth
+
+    flash("Payment cancelled. You can try again anytime.", "info")
+    return redirect(url_for("pricing"))
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
+
+@app.route("/business")
+def business():
+    return render_template("business.html")
+
+@app.route("/admin/newsletter")
+def newsletter_admin():
+    if not session.get("is_admin"):  # Add is_admin flag to users table
+        abort(403)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT email, subscribed_at FROM newsletter_subscribers ORDER BY subscribed_at DESC")
+    subscribers = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return render_template("admin/newsletter.html", subscribers=subscribers)
 
 # Health check endpoint that bypasses rate limiting
 @app.route("/health")

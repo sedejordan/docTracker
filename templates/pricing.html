@@ -157,14 +157,18 @@
                         </li>
                     </ul>
                     {% if session.get('user_id') %}
-                        {% if subscription_tier == 'pro' %}
+                        <!-- For Pro Plan - Monthly -->
+                        {% if subscription_tier != 'pro' %}
+                            <a href="{{ url_for('subscribe', plan_type='pro_monthly') }}" 
+                            class="block w-full mt-6 text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                                <i class="fas fa-rocket mr-2"></i> Upgrade to Pro
+                            </a>
+                            <p class="text-xs text-gray-500 text-center mt-2">Monthly subscription</p>
+                        {% else %}
                             <button class="block w-full mt-6 text-center bg-green-500 text-white py-2 rounded-lg cursor-default" disabled>
                                 <i class="fas fa-check mr-2"></i> Current Plan
                             </button>
-                        {% else %}
-                            <button class="block w-full mt-6 text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition opacity-50 cursor-not-allowed" disabled>
-                                Coming Soon
-                            </button>
+                        {% endif %}
                             <p class="text-xs text-gray-500 text-center mt-2">Beta — Free until launch</p>
                         {% endif %}
                     {% else %}
@@ -218,15 +222,17 @@
                         </li>
                     </ul>
                     {% if session.get('user_id') %}
-                        {% if subscription_tier == 'vip' %}
+                        <!-- For VIP Plan - Monthly -->
+                        {% if subscription_tier != 'vip' %}
+                            <a href="{{ url_for('subscribe', plan_type='vip_monthly') }}" 
+                            class="block w-full mt-6 text-center bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">
+                                <i class="fas fa-crown mr-2"></i> Upgrade to VIP
+                            </a>
+                            <p class="text-xs text-gray-500 text-center mt-2">Monthly subscription</p>
+                        {% else %}
                             <button class="block w-full mt-6 text-center bg-purple-700 text-white py-2 rounded-lg cursor-default" disabled>
                                 <i class="fas fa-check mr-2"></i> Current Plan
                             </button>
-                        {% else %}
-                            <button class="block w-full mt-6 text-center bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition opacity-50 cursor-not-allowed" disabled>
-                                Coming Soon
-                            </button>
-                            <p class="text-xs text-gray-500 text-center mt-2">Beta — Free until launch</p>
                         {% endif %}
                     {% else %}
                         <button class="block w-full mt-6 text-center bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition opacity-50 cursor-not-allowed" disabled>
