@@ -1949,14 +1949,17 @@ def initiate_payment():
         base_url = os.environ.get("APP_URL", "tracker.fritt.org")
         redirect_url = f"https://{base_url}{url_for('payment_callback')}"
         
+        # Generate a unique transaction reference
+        tx_ref = f"fritt_{session['user_id']}_{int(time.time())}"
+        
         # Prepare the payload with proper structure
         payload = {
             'amount': str(amount),
             'currency': currency,
-            'tx_ref': f"fritt_{session['user_id']}_{int(time.time())}",
+            'tx_ref': tx_ref,
             'payment_plan': int(plan_id),
             'redirect_url': redirect_url,
-            'customer': {  # ← This is the key change!
+            'customer': {
                 'email': session['email'],
                 'name': session.get('email', 'Customer').split('@')[0],
             },
@@ -1988,10 +1991,17 @@ def initiate_payment():
         if response.status_code == 200:
             data = response.json()
             if data.get('status') == 'success':
-                # Store transaction reference in session
-                session['tx_ref'] = data['data']['tx_ref']
-                # Redirect to Flutterwave checkout
-                return redirect(data['data']['link'])
+                # Store the tx_ref in session so we can use it in callback
+                session['tx_ref'] = tx_ref  # Use the one we generated
+                
+                # Get the link from the response
+                link = data['data'].get('link')
+                if link:
+                    # Redirect to Flutterwave checkout
+                    return redirect(link)
+                else:
+                    flash("Payment link not found.", "error")
+                    return redirect(url_for("pricing"))
             else:
                 error_message = data.get('message', 'Unknown error')
                 print(f"❌ Flutterwave error: {error_message}")
@@ -1999,6 +2009,7 @@ def initiate_payment():
                 return redirect(url_for("pricing"))
         else:
             print(f"❌ HTTP Error: {response.status_code}")
+            print(f"❌ Response: {response.text}")
             flash("Payment initialization failed. Please try again.", "error")
             return redirect(url_for("pricing"))
         
@@ -2008,7 +2019,7 @@ def initiate_payment():
         traceback.print_exc()
         flash("Payment initialization failed. Please try again.", "error")
         return redirect(url_for("pricing"))
-     
+    
 @app.route("/payment/callback")
 def payment_callback():
     """Handle payment callback from Flutterwave."""
