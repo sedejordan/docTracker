@@ -396,10 +396,25 @@ def get_user_by_reset_token(token):
         conn.close()
 
     if user is None:
+        print("Debug: No user found with this token")
+        return None
+
+    # Debug: Check the structure
+    print(f"Debug: User tuple has {len(user)} elements: {user}")
+
+    # user should be a tuple with 3 elements
+    if len(user) != 3:
+        print(f"Error: Expected 3 elements, got {len(user)}")
         return None
 
     user_id, email, expiry = user
-    if expiry is None or datetime.now(timezone.utc) > expiry:
+    # Check if expiry exists and is not expired
+    if expiry is None:
+        print("Debug: expiry is None")
+        return None
+
+    if datetime.now(timezone.utc) > expiry:
+        print(f"Debug: Token expired at {expiry}")
         return None
 
     return user
@@ -556,7 +571,7 @@ def send_password_reset_email(user_email, reset_link):
             print(f"Warning: Resend returned an error sending password reset email: {response.text}")
     except Exception as e:
         print(f"Warning: failed to send password reset email: {e}")
-        
+
 def send_verification_email(user_email, user_id):
     """
     Send email verification link to a new user.
@@ -1247,35 +1262,44 @@ def forgot_password():
     message = None
 
     if request.method == "POST":
-        email = request.form["email"].strip().lower()
-        user = get_user_by_email(email)
+        email = request.form.get("email", "").strip().lower()
+        
+        if not email:
+            message = "Please enter your email address."
+        else:
+            user = get_user_by_email(email)
 
-        if user:
-            user_id = user[0]
-            token = secrets.token_urlsafe(32)
-            expiry = datetime.now(timezone.utc) + RESET_TOKEN_LIFETIME
+            if user:
+                # user should be (id, email, password_hash, email_verified)
+                if len(user) >= 1:
+                    user_id = user[0]
+                    token = secrets.token_urlsafe(32)
+                    expiry = datetime.now(timezone.utc) + RESET_TOKEN_LIFETIME
 
-            conn = get_db()
-            try:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE users SET reset_token = %s, reset_token_expiry = %s WHERE id = %s",
-                    (token, expiry, user_id)
-                )
-                conn.commit()
-                cursor.close()
-            finally:
-                conn.close()
+                    conn = get_db()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "UPDATE users SET reset_token = %s, reset_token_expiry = %s WHERE id = %s",
+                            (token, expiry, user_id)
+                        )
+                        conn.commit()
+                        cursor.close()
+                    finally:
+                        conn.close()
 
-            reset_link = url_for("reset_password", token=token, _external=True)
-            send_password_reset_email(email, reset_link)
+                    reset_link = url_for("reset_password", token=token, _external=True)
+                    # Force HTTPS
+                    if reset_link.startswith('http://'):
+                        reset_link = reset_link.replace('http://', 'https://')
+                    send_password_reset_email(email, reset_link)
+                else:
+                    print(f"Warning: Unexpected user data from get_user_by_email for {email}")
 
-        # Same message whether or not the email is registered - this stops
-        # this form being used to check which emails have an account here.
-        message = "If an account exists for that email, we've sent a password reset link."
+            # Same message whether or not the email is registered
+            message = "If an account exists for that email, we've sent a password reset link."
 
     return render_template("forgot_password.html", message=message)
-
 
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
 @limiter.limit("15 per hour")
@@ -1283,14 +1307,21 @@ def reset_password(token):
     user = get_user_by_reset_token(token)
 
     if not user:
-        return render_template("reset_password.html", invalid=True)
+        # Token is invalid or expired
+        flash("❌ This password reset link has expired or is invalid. Please request a new one.", "error")
+        return redirect(url_for("forgot_password"))
+
+    # Ensure user has enough elements
+    if len(user) < 3:
+        flash("❌ An error occurred. Please try again.", "error")
+        return redirect(url_for("forgot_password"))
 
     user_id = user[0]
     error = None
 
     if request.method == "POST":
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
         if len(password) < 8:
             error = "Password must be at least 8 characters"
@@ -1311,6 +1342,8 @@ def reset_password(token):
                 cursor.close()
             finally:
                 conn.close()
+
+            flash("✅ Password reset successfully! Please log in with your new password.", "success")
             return redirect(url_for("login"))
 
     return render_template("reset_password.html", invalid=False, error=error)
