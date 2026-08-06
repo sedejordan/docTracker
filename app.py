@@ -138,10 +138,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 # its free tier - HTTPS (port 443) isn't blocked, so an API-based email
 # provider is the reliable option here.
 # RESEND_API_KEY comes from resend.com (API Keys section).
-# RESEND_FROM_EMAIL must be "onboarding@resend.dev" until you verify your
-# own domain with Resend - after that, use an address on your domain.
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "auth@fritt.org")
 
 # How long a password reset link stays valid before the user has to
 # request a new one.
