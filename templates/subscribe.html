@@ -4,6 +4,25 @@
     <title>Subscribe - Fritt Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .btn-loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <div class="container mx-auto px-4 py-12 max-w-md">
@@ -30,15 +49,16 @@
                 </p>
             </div>
             
-            <form action="{{ url_for('initiate_payment') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form action="{{ url_for('initiate_payment') }}" method="POST" id="payment-form">
+                {{ csrf_token() }}
                 <input type="hidden" name="plan_id" value="{{ plan_id }}">
                 <input type="hidden" name="plan_type" value="{{ plan_type }}">
                 
                 <button type="submit" 
+                        id="pay-button"
                         class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
-                    <i class="fas fa-credit-card mr-2"></i>
-                    Pay {{ pricing.currency }}{{ plan_details.price }}
+                    <span id="button-text"><i class="fas fa-credit-card mr-2"></i> Pay {{ pricing.currency }}{{ plan_details.price }}</span>
+                    <span id="button-loading" class="hidden"><span class="spinner mr-2"></span> Processing...</span>
                 </button>
             </form>
             
@@ -52,5 +72,17 @@
             </a>
         </div>
     </div>
+
+    <script>
+        document.getElementById('payment-form').addEventListener('submit', function() {
+            const button = document.getElementById('pay-button');
+            const buttonText = document.getElementById('button-text');
+            const buttonLoading = document.getElementById('button-loading');
+            
+            button.classList.add('btn-loading');
+            buttonText.classList.add('hidden');
+            buttonLoading.classList.remove('hidden');
+        });
+    </script>
 </body>
 </html>
