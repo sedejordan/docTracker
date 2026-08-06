@@ -40,17 +40,19 @@ from flask_limiter.util import get_remote_address
 from flask import flash
 import csv
 import io
-#import json
+import json
 from functools import lru_cache
 import time
 from rave_python import Rave
+import hashlib
+import hmac
 
 from database import init_db, get_db, put_db
 
 # CHANGE!!!
 # A secret token (store in environment variables as TRIGGER_SECRET)
 # When you create the cron job, you'll pass this in the URL or a header
-TRIGGER_SECRET = os.environ.get("TRIGGER_SECRET", "df466afcf81aab5f9334f64980873634")
+TRIGGER_SECRET = os.environ.get("TRIGGER_SECRET", "")
 
 # --- ERROR MONITORING (Sentry) ---
 # Optional - only enabled if SENTRY_DSN environment variable is set.
@@ -155,6 +157,9 @@ SUBSCRIPTION_TIERS = {
 # Simple in-memory cache for subscription status
 _subscription_cache = {}
 _cache_ttl = 60  # 60 seconds
+
+# Get webhook secret from environment variables
+FLW_WEBHOOK_SECRET = os.environ.get("FLW_WEBHOOK_SECRET", "")
 
 def get_cached_subscription_status(user_id):
     """Get subscription status with simple caching."""
@@ -701,7 +706,41 @@ def send_verification_email(user_email, user_id):
     except Exception as e:
         print(f"Warning: failed to send verification email: {e}")
         return False
-       
+
+def send_subscription_expiry_email(user_email, user_name=None):
+    """Send email notification when subscription expires."""
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={
+                "from": RESEND_FROM_EMAIL,
+                "to": [user_email],
+                "subject": "Your Fritt Tracker Subscription Has Expired",
+                "html": f"""
+                    <h2>Your Subscription Has Expired</h2>
+                    <p>Your Fritt Tracker subscription has expired.</p>
+                    <p>You've been moved back to the Free plan with a 20-document limit.</p>
+                    <p>If you have more than 20 documents, we've kept your 20 most important ones.</p>
+                    <p><a href="https://tracker.fritt.org/pricing">Renew your subscription →</a></p>
+                """,
+                "text": f"""
+                    Your Fritt Tracker subscription has expired.
+                    
+                    You've been moved back to the Free plan with a 20-document limit.
+                    
+                    If you have more than 20 documents, we've kept your 20 most important ones.
+                    
+                    Renew your subscription: https://tracker.fritt.org/pricing
+                """
+            },
+            timeout=10
+        )
+        return response.status_code < 400
+    except Exception as e:
+        print(f"Error sending expiry email: {e}")
+        return False
+    
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP (see note above) ---
 # def allowed_file(filename):
 #     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -915,6 +954,87 @@ def get_currency_for_region(region):
         'us': 'USD'
     }
     return currency_map.get(region, 'USD')
+
+def update_user_to_free(user_id):
+    """
+    Update a user's subscription to free tier.
+    Called when subscription is cancelled or expires.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        
+        # First, get the user's current subscription info
+        cursor.execute(
+            "SELECT subscription_tier, subscription_status FROM users WHERE id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        
+        if not result:
+            print(f"User {user_id} not found")
+            return False
+        
+        current_tier, current_status = result
+        
+        # Only update if user is on a paid plan
+        if current_tier in ['pro', 'vip']:
+            # Check if user has more than 20 documents
+            cursor.execute(
+                "SELECT COUNT(*) FROM documents WHERE user_id = %s",
+                (user_id,)
+            )
+            doc_count = cursor.fetchone()[0]
+            
+            if doc_count > 20:
+                # User has more than 20 docs - trim them
+                trim_documents_to_free_limit(user_id)
+                print(f"Trimmed documents for user {user_id} (had {doc_count} docs)")
+            
+            # Update to free tier
+            cursor.execute("""
+                UPDATE users 
+                SET subscription_tier = 'free',
+                    subscription_status = 'expired',
+                    subscription_expiry = NULL
+                WHERE id = %s
+            """, (user_id,))
+            conn.commit()
+            
+            print(f"✅ User {user_id} downgraded to Free tier (was {current_tier})")
+            return True
+        else:
+            print(f"User {user_id} is already on Free tier")
+            return False
+            
+    except Exception as e:
+        print(f"Error updating user {user_id} to free: {e}")
+        conn.rollback()
+        return False
+    finally:
+        put_db(conn)
+
+def verify_flutterwave_webhook(data, signature):
+    """
+    Verify webhook signature for v3.
+    """
+    if not FLW_WEBHOOK_SECRET:
+        print("⚠️ FLW_WEBHOOK_SECRET not set - webhook verification disabled")
+        return True
+    
+    if not signature:
+        print("❌ No signature provided")
+        return False
+    
+    # Compute expected signature
+    expected_signature = hmac.new(
+        FLW_WEBHOOK_SECRET.encode('utf-8'),
+        json.dumps(data).encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(expected_signature, signature)
+
 
 # --- CUSTOM ERROR PAGES ---
 # These replace Flask's default debug/error pages with branded versions
@@ -1946,24 +2066,87 @@ def newsletter_admin():
 @app.route("/webhook/flutterwave", methods=["POST"])
 def flutterwave_webhook():
     """Handle Flutterwave webhook for subscription events."""
-    data = request.json
-    
-    # Verify webhook signature
-    # (You'll need to implement signature verification)
-    
-    if data['event'] == 'charge.completed':
-        # Handle successful payment
-        pass
-    elif data['event'] == 'subscription.cancelled':
-        # Handle subscription cancellation
-        user_id = data['data']['meta']['user_id']
-        update_user_to_free(user_id)
-    elif data['event'] == 'subscription.expired':
-        # Handle subscription expiry
-        user_id = data['data']['meta']['user_id']
-        update_user_to_free(user_id)
-    
-    return "OK", 200
+    try:
+        data = request.json
+        
+        # Log the webhook for debugging
+        print(f"📨 Webhook received: {data.get('event', 'unknown')}")
+        
+        # Verify webhook signature
+        signature = request.headers.get('verif-hash')
+        if not verify_flutterwave_webhook(data, signature):
+            print("❌ Webhook signature verification failed")
+            return "Unauthorized", 401
+        
+        event = data.get('event')
+        
+        if event == 'charge.completed':
+            # Handle successful payment
+            print("✅ Payment completed")
+            
+            webhook_data = data.get('data', {})
+            meta = webhook_data.get('meta', {})
+            user_id = meta.get('user_id')
+            
+            if user_id:
+                plan_type = meta.get('plan_type', 'pro_monthly')
+                tier = plan_type.split('_')[0] if plan_type else 'pro'
+                
+                conn = get_db()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE users 
+                        SET subscription_tier = %s,
+                            subscription_status = 'active',
+                            subscription_expiry = NULL
+                        WHERE id = %s
+                    """, (tier, user_id))
+                    conn.commit()
+                    cursor.close()
+                    print(f"✅ User {user_id} upgraded to {tier}")
+                finally:
+                    put_db(conn)
+        
+        elif event == 'subscription.cancelled':
+            print("❌ Subscription cancelled")
+            webhook_data = data.get('data', {})
+            meta = webhook_data.get('meta', {})
+            user_id = meta.get('user_id')
+            
+            if user_id:
+                update_user_to_free(user_id)
+                print(f"✅ User {user_id} downgraded to Free due to cancellation")
+        
+        elif event == 'subscription.expired':
+            print("⏰ Subscription expired")
+            webhook_data = data.get('data', {})
+            meta = webhook_data.get('meta', {})
+            user_id = meta.get('user_id')
+            
+            if user_id:
+                update_user_to_free(user_id)
+                print(f"✅ User {user_id} downgraded to Free due to expiry")
+        
+        elif event == 'charge.failed':
+            print("❌ Payment failed")
+            webhook_data = data.get('data', {})
+            meta = webhook_data.get('meta', {})
+            user_id = meta.get('user_id')
+            if user_id:
+                print(f"⚠️ Payment failed for user {user_id}")
+                # Optionally send email notification
+        
+        else:
+            print(f"ℹ️ Unhandled webhook event: {event}")
+        
+        return "OK", 200
+        
+    except Exception as e:
+        print(f"❌ Webhook error: {e}")
+        import traceback
+        traceback.print_exc()
+        return "Internal Server Error", 500
 
 # Health check endpoint that bypasses rate limiting
 @app.route("/health")

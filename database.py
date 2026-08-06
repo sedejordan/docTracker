@@ -172,10 +172,17 @@ def init_db():
                 """)
                 print(f"✅ Removed {cursor.rowcount} duplicate documents.")
             
-            cursor.execute("""
-                ALTER TABLE documents ADD CONSTRAINT IF NOT EXISTS unique_document_for_user 
-                UNIQUE (user_id, title, expiry_date);
-            """)
+            # With this:
+            try:
+                cursor.execute("""
+                    ALTER TABLE documents ADD CONSTRAINT unique_document_for_user 
+                    UNIQUE (user_id, title, expiry_date);
+                """)
+            except psycopg2.errors.DuplicateTable:
+                # Constraint already exists - that's fine
+                pass
+            except Exception as e:
+                print(f"⚠️ Could not add unique constraint: {e}")
             print("✅ Added unique constraint for documents")
             conn.commit()
 

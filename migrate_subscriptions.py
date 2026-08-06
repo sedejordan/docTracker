@@ -10,7 +10,8 @@ from datetime import datetime, timedelta
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-def run_migration():
+def run_subscription_migration():
+    """Run the subscription migration."""
     if not DATABASE_URL:
         print("❌ DATABASE_URL not set")
         return
@@ -19,7 +20,7 @@ def run_migration():
     try:
         cursor = conn.cursor()
         
-        # Check if columns exist first
+        # Check if columns exist
         cursor.execute("""
             SELECT column_name 
             FROM information_schema.columns 
@@ -59,9 +60,6 @@ def run_migration():
         conn.commit()
         
         print(f"✅ Updated {updated_count} users to Pro tier (1 month free)")
-        print(f"   They'll have 1 month to manage their documents")
-        print(f"   After expiry, the 20 farthest-from-expiry documents will be kept")
-        print(f"   and the rest will be removed")
         
         # Show summary
         cursor.execute("""
@@ -83,4 +81,4 @@ def run_migration():
         conn.close()
 
 if __name__ == "__main__":
-    run_migration()
+    run_subscription_migration()
