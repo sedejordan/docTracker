@@ -249,39 +249,6 @@ def trim_documents_to_free_limit(user_id):
     finally:
         conn.close()
 
-def get_subscription_status(user_id):
-    """Get user's subscription status and expiry."""
-    conn = get_db()
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT subscription_tier, subscription_status, subscription_expiry FROM users WHERE id = %s",
-            (user_id,)
-        )
-        result = cursor.fetchone()
-        cursor.close()
-        
-        if result:
-            tier, status, expiry = result
-            # Check if subscription is active (status='active' and not expired)
-            is_active = True
-            if tier != 'free' and expiry is not None:
-                is_active = expiry > datetime.now(timezone.utc)
-            elif tier == 'free':
-                is_active = True  # Free tier never expires
-            else:
-                is_active = status == 'active'
-            
-            return {
-                'tier': tier,
-                'status': status,
-                'expiry': expiry,
-                'is_active': is_active
-            }
-        return {'tier': 'free', 'status': 'active', 'expiry': None, 'is_active': True}
-    finally:
-        conn.close()
-
 def get_document_count(user_id):
     """Get the number of documents a user has."""
     conn = get_db()
@@ -330,24 +297,6 @@ try:
 except Exception as e:
     print(f"Note: Subscription migration not run: {e}")
 
-def is_email_verified(user_id):
-    """Check if a user's email is verified."""
-    conn = get_db()
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT email_verified FROM users WHERE id = %s",
-            (user_id,)
-        )
-        result = cursor.fetchone()
-        cursor.close()
-        
-        if result:
-            return result[0]  # Returns True/False
-        return False
-    finally:
-        conn.close()
-
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP ---
 # Uploaded files were being stored on Render's local disk, which is wiped
 # on every redeploy/restart. Re-enable this once we have persistent storage
@@ -375,13 +324,14 @@ def get_user_by_email(email):
     finally:
         conn.close()
 
+def get_utc_now():
+    """Helper function to get timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 def get_user_by_reset_token(token):
     """
     Returns (id, email, reset_token_expiry) for a valid, unexpired reset
-    token, or None if the token doesn't exist or has expired. Used by the
-    reset-password page to check a link is still good before letting
-    someone set a new password.
+    token, or None if the token doesn't exist or has expired.
     """
     conn = get_db()
     try:
@@ -396,28 +346,79 @@ def get_user_by_reset_token(token):
         conn.close()
 
     if user is None:
-        print("Debug: No user found with this token")
-        return None
-
-    # Debug: Check the structure
-    print(f"Debug: User tuple has {len(user)} elements: {user}")
-
-    # user should be a tuple with 3 elements
-    if len(user) != 3:
-        print(f"Error: Expected 3 elements, got {len(user)}")
         return None
 
     user_id, email, expiry = user
-    # Check if expiry exists and is not expired
+    
+    # Handle both naive and aware datetimes
     if expiry is None:
-        print("Debug: expiry is None")
         return None
-
-    if datetime.now(timezone.utc) > expiry:
-        print(f"Debug: Token expired at {expiry}")
+    
+    # If expiry is naive (no timezone), make it aware
+    if expiry.tzinfo is None:
+        # Assume the naive datetime is UTC
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    
+    # Now compare with timezone-aware current time
+    if get_utc_now() > expiry:
         return None
 
     return user
+
+def is_email_verified(user_id):
+    """Check if a user's email is verified."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT email_verified FROM users WHERE id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        
+        if result:
+            return result[0]  # Returns True/False
+        return False
+    finally:
+        conn.close()
+
+def get_subscription_status(user_id):
+    """Get user's subscription status and expiry."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT subscription_tier, subscription_status, subscription_expiry FROM users WHERE id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        
+        if result:
+            tier, status, expiry = result
+            # Make expiry timezone-aware if it's naive
+            if expiry and expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+
+            # Check if subscription is active (status='active' and not expired)
+            is_active = True
+            if tier != 'free' and expiry is not None:
+                is_active = expiry > get_utc_now()
+            elif tier == 'free':
+                is_active = True  # Free tier never expires
+            else:
+                is_active = status == 'active'
+            
+            return {
+                'tier': tier,
+                'status': status,
+                'expiry': expiry,
+                'is_active': is_active
+            }
+        return {'tier': 'free', 'status': 'active', 'expiry': None, 'is_active': True}
+    finally:
+        conn.close()
 
 def send_welcome_email(user_email, user_id):
     """
@@ -579,6 +580,7 @@ def send_verification_email(user_email, user_id):
     try:
         # Create verification token
         token = secrets.token_urlsafe(32)
+        # IMPORTANT: Store as timezone-aware UTC
         expiry = datetime.now(timezone.utc) + timedelta(hours=24)
         
         conn = get_db()
@@ -1270,31 +1272,28 @@ def forgot_password():
             user = get_user_by_email(email)
 
             if user:
-                # user should be (id, email, password_hash, email_verified)
-                if len(user) >= 1:
-                    user_id = user[0]
-                    token = secrets.token_urlsafe(32)
-                    expiry = datetime.now(timezone.utc) + RESET_TOKEN_LIFETIME
+                user_id = user[0]
+                token = secrets.token_urlsafe(32)
+                # IMPORTANT: Store as timezone-aware UTC
+                expiry = datetime.now(timezone.utc) + RESET_TOKEN_LIFETIME
 
-                    conn = get_db()
-                    try:
-                        cursor = conn.cursor()
-                        cursor.execute(
-                            "UPDATE users SET reset_token = %s, reset_token_expiry = %s WHERE id = %s",
-                            (token, expiry, user_id)
-                        )
-                        conn.commit()
-                        cursor.close()
-                    finally:
-                        conn.close()
+                conn = get_db()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE users SET reset_token = %s, reset_token_expiry = %s WHERE id = %s",
+                        (token, expiry, user_id)
+                    )
+                    conn.commit()
+                    cursor.close()
+                finally:
+                    conn.close()
 
-                    reset_link = url_for("reset_password", token=token, _external=True)
-                    # Force HTTPS
-                    if reset_link.startswith('http://'):
-                        reset_link = reset_link.replace('http://', 'https://')
-                    send_password_reset_email(email, reset_link)
-                else:
-                    print(f"Warning: Unexpected user data from get_user_by_email for {email}")
+                reset_link = url_for("reset_password", token=token, _external=True)
+                # Force HTTPS
+                if reset_link.startswith('http://'):
+                    reset_link = reset_link.replace('http://', 'https://')
+                send_password_reset_email(email, reset_link)
 
             # Same message whether or not the email is registered
             message = "If an account exists for that email, we've sent a password reset link."
