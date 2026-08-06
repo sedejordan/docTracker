@@ -17,17 +17,39 @@ install, or just develop against the same Render database).
 
 import os
 import psycopg2
+from psycopg2 import pool
+from contextlib import contextmanager
+
+# Connection pool
+db_pool = None
+
+def init_pool():
+    global db_pool
+    if db_pool is None:
+        db_pool = psycopg2.pool.SimpleConnectionPool(
+            1, 20,  # min 1, max 20 connections
+            dsn=os.environ.get("DATABASE_URL")
+        )
+
+@contextmanager
+def get_connection():
+    """Get a connection from the pool with context manager."""
+    if db_pool is None:
+        init_pool()
+    conn = db_pool.getconn()
+    try:
+        yield conn
+    finally:
+        db_pool.putconn(conn)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 def get_db():
-    """
-    Opens a new connection to the PostgreSQL database.
-    Every function that talks to the database calls this to get its
-    own connection, then closes it when done (see app.py).
-    """
-    return psycopg2.connect(DATABASE_URL)
+    """Get a database connection from the pool."""
+    if db_pool is None:
+        init_pool()
+    return db_pool.getconn()
 
 
 def init_db():

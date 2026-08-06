@@ -41,6 +41,8 @@ from flask import flash
 import csv
 import io
 #import json
+from functools import lru_cache
+import time
 
 from database import init_db, get_db
 
@@ -142,6 +144,26 @@ SUBSCRIPTION_TIERS = {
         'price_yearly': 149.99
     }
 }
+
+# Simple in-memory cache for subscription status
+_subscription_cache = {}
+_cache_ttl = 60  # 60 seconds
+
+def get_cached_subscription_status(user_id):
+    """Get subscription status with simple caching."""
+    cache_key = f"sub_{user_id}"
+    now = datetime.now(timezone.utc)
+    
+    # Check if cached and not expired
+    if cache_key in _subscription_cache:
+        cached_data, cache_time = _subscription_cache[cache_key]
+        if (now - cache_time).total_seconds() < _cache_ttl:
+            return cached_data
+    
+    # Get fresh data
+    result = get_subscription_status(user_id)
+    _subscription_cache[cache_key] = (result, now)
+    return result
 
 def get_user_subscription(user_id):
     """Get user's current subscription tier."""
@@ -836,6 +858,14 @@ def get_pricing(region='us'):
         }
     }
     return pricing.get(region, pricing['us'])
+
+def log_slow_query(query, params=None, threshold=0.1):
+    """Log queries that take longer than threshold seconds."""
+    start = time.time()
+    # Execute query...
+    duration = time.time() - start
+    if duration > threshold:
+        print(f"SLOW QUERY ({duration:.3f}s): {query[:100]}...")
 
 # --- CUSTOM ERROR PAGES ---
 # These replace Flask's default debug/error pages with branded versions
