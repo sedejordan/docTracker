@@ -1443,7 +1443,27 @@ def pricing():
     """Pricing page showing subscription tiers."""
     region = get_user_region()
     pricing = get_pricing(region)
-    return render_template("pricing.html", pricing=pricing)
+    
+    # If user is logged in, get their subscription info
+    subscription_tier = 'free'
+    subscription_expiry = None
+    doc_count = 0
+    
+    if session.get('user_id'):
+        user_id = session['user_id']
+        sub_status = get_subscription_status(user_id)
+        subscription_tier = sub_status['tier']
+        subscription_expiry = sub_status['expiry']
+        doc_count = get_document_count(user_id)
+    
+    return render_template(
+        "pricing.html",
+        pricing=pricing,
+        subscription_tier=subscription_tier,
+        subscription_expiry=subscription_expiry,
+        doc_count=doc_count,
+        now=datetime.now(timezone.utc)
+    )
 
 # --- LEGAL PAGES ---
 @app.route("/terms")
