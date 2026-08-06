@@ -20,7 +20,7 @@ not deleted, so it can be switched back on once there's persistent
 file storage in place (e.g. S3, Supabase Storage, or a Render disk).
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import (
     Flask, render_template, request, redirect, session,
     url_for, abort
@@ -34,14 +34,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import secrets
 import requests
-import psycopg2
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask import flash
-import subprocess
 import csv
 import io
+#import json
 
 from database import init_db, get_db
 
@@ -71,7 +70,7 @@ else:
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
 
-app.config['SERVER_NAME'] = os.environ.get("APP_URL", "doctracker-bxxw.onrender.com")
+app.config['SERVER_NAME'] = os.environ.get("APP_URL", "tracker.fritt.org")
 
 # --- SECURE COOKIE SETTINGS ---
 # SESSION_COOKIE_SECURE: only send the login cookie over HTTPS, never plain
@@ -122,12 +121,181 @@ limiter = Limiter(
     enabled=os.environ.get("DISABLE_RATE_LIMITING", "false").lower() != "true"
 )
 
-# Health check endpoint that bypasses rate limiting
-@app.route("/health")
-@limiter.exempt
-def health_check():
-    """Health check endpoint for UptimeRobot — no rate limit."""
-    return "OK", 200
+# Subscription tiers
+SUBSCRIPTION_TIERS = {
+    'free': {
+        'name': 'Free',
+        'doc_limit': 20,
+        'price_monthly': 0,
+        'price_yearly': 0
+    },
+    'pro': {
+        'name': 'Pro',
+        'doc_limit': 100,
+        'price_monthly': 4.99,
+        'price_yearly': 49.99
+    },
+    'business': {
+        'name': 'Business',
+        'doc_limit': 0,
+        'price_monthly': 14.99,
+        'price_yearly': 149.99
+    }
+}
+
+def get_user_subscription(user_id):
+    """Get user's current subscription tier."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT subscription_tier FROM users WHERE id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        return result[0] if result else 'free'
+    finally:
+        conn.close()
+
+def can_add_document(user_id):
+    """Check if user can add more documents based on subscription."""
+    sub_status = get_subscription_status(user_id)
+    
+    # If Pro expired, trigger cleanup
+    if sub_status['tier'] == 'pro' and not sub_status['is_active']:
+        # Trim documents and revert to free
+        deleted_count = trim_documents_to_free_limit(user_id)
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE users 
+                SET subscription_tier = 'free', 
+                    subscription_status = 'expired',
+                    subscription_expiry = NULL
+                WHERE id = %s
+            """, (user_id,))
+            conn.commit()
+            cursor.close()
+        finally:
+            conn.close()
+        # User is now on free tier
+        tier = 'free'
+    else:
+        tier = sub_status['tier']
+    
+    # VIP has unlimited documents
+    if tier == 'vip':
+        return True
+    
+    # Get the limit for this tier
+    limit = SUBSCRIPTION_TIERS.get(tier, {}).get('doc_limit', 20)
+    
+    # Count current documents
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM documents WHERE user_id = %s",
+            (user_id,)
+        )
+        count = cursor.fetchone()[0]
+        cursor.close()
+        return count < limit
+    finally:
+        conn.close()
+
+def trim_documents_to_free_limit(user_id):
+    """
+    When a user's Pro subscription expires, keep only the 20 documents
+    farthest from expiry (i.e., the ones with the furthest expiry dates)
+    and delete the rest.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        
+        # Get all document IDs for this user, ordered by expiry_date DESC (farthest first)
+        cursor.execute("""
+            SELECT id 
+            FROM documents 
+            WHERE user_id = %s 
+            ORDER BY expiry_date DESC
+        """, (user_id,))
+        all_docs = [row[0] for row in cursor.fetchall()]
+        
+        # If user has 20 or fewer documents, nothing to do
+        if len(all_docs) <= 20:
+            return 0
+        
+        # Keep the first 20 (farthest expiry), delete the rest
+        docs_to_keep = all_docs[:20]
+        docs_to_delete = all_docs[20:]
+        
+        if docs_to_delete:
+            # Delete documents that are closest to expiry
+            placeholders = ','.join(['%s'] * len(docs_to_delete))
+            cursor.execute(
+                f"DELETE FROM documents WHERE id IN ({placeholders}) AND user_id = %s",
+                docs_to_delete + [user_id]
+            )
+            deleted_count = cursor.rowcount
+            conn.commit()
+            
+            return deleted_count
+        
+        return 0
+    finally:
+        conn.close()
+
+def get_subscription_status(user_id):
+    """Get user's subscription status and expiry."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT subscription_tier, subscription_status, subscription_expiry FROM users WHERE id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        
+        if result:
+            tier, status, expiry = result
+            # Check if subscription is active (status='active' and not expired)
+            is_active = True
+            if tier != 'free' and expiry is not None:
+                is_active = expiry > datetime.now(timezone.utc)
+            elif tier == 'free':
+                is_active = True  # Free tier never expires
+            else:
+                is_active = status == 'active'
+            
+            return {
+                'tier': tier,
+                'status': status,
+                'expiry': expiry,
+                'is_active': is_active
+            }
+        return {'tier': 'free', 'status': 'active', 'expiry': None, 'is_active': True}
+    finally:
+        conn.close()
+
+def get_document_count(user_id):
+    """Get the number of documents a user has."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM documents WHERE user_id = %s",
+            (user_id,)
+        )
+        count = cursor.fetchone()[0]
+        cursor.close()
+        return count
+    finally:
+        conn.close()
 
 # Render provides this automatically once a PostgreSQL database is
 # created and linked to this web service. See README for local setup.
@@ -155,6 +323,31 @@ try:
 except Exception as e:
     print(f"Warning: could not initialize database tables on startup: {e}")
 
+# Run migration for existing users
+try:
+    from migrate_subscriptions import run_subscription_migration
+    run_subscription_migration()
+except Exception as e:
+    print(f"Note: Subscription migration not run: {e}")
+
+def is_email_verified(user_id):
+    """Check if a user's email is verified."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT email_verified FROM users WHERE id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        
+        if result:
+            return result[0]  # Returns True/False
+        return False
+    finally:
+        conn.close()
+
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP ---
 # Uploaded files were being stored on Render's local disk, which is wiped
 # on every redeploy/restart. Re-enable this once we have persistent storage
@@ -165,22 +358,22 @@ except Exception as e:
 # app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
-# def get_db():
-#     """Opens a new PostgreSQL connection. Callers are responsible for closing it."""
-#     return psycopg2.connect(DATABASE_URL)
-
-
 def get_user_by_email(email):
-    """Returns (id, email, password_hash) for this email, or None if no account exists."""
+    """Returns (id, email, password_hash, email_verified) for this email, or None if no account exists."""
     conn = get_db()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, email, password_hash FROM users WHERE email = %s", (email,))
+        cursor.execute("SELECT id, email, password_hash, email_verified FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
         cursor.close()
+
+         # Ensure we return a tuple with 4 elements if user exists
+        if user:
+            # User is already a tuple with 4 elements from the query
+            return user
+        return None
     finally:
         conn.close()
-    return user
 
 
 def get_user_by_reset_token(token):
@@ -206,20 +399,129 @@ def get_user_by_reset_token(token):
         return None
 
     user_id, email, expiry = user
-    if expiry is None or datetime.utcnow() > expiry:
+    if expiry is None or datetime.now(timezone.utc) > expiry:
         return None
 
     return user
 
+def send_welcome_email(user_email, user_id):
+    """
+    Send a welcome email to a newly verified user.
+    """
+    try:
+        # Get user's name or use a generic greeting
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT email FROM users WHERE id = %s", (user_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            user_name = result[0].split('@')[0] if result else "there"
+        finally:
+            conn.close()
+        
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={
+                "from": RESEND_FROM_EMAIL,
+                "to": [user_email],
+                "subject": "Welcome to Fritt Tracker! 🎉",
+                "html": f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                            .header {{ background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+                            .content {{ padding: 30px; background: #f9fafb; }}
+                            .button {{ background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }}
+                            .footer {{ text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }}
+                            .tip {{ background: white; padding: 15px; border-radius: 8px; margin: 10px 0; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <h1>Welcome to Fritt Tracker, {user_name}! 👋</h1>
+                            </div>
+                            <div class="content">
+                                <p>Your email has been verified successfully! You're all set to start tracking your important documents.</p>
+                                
+                                <div class="tip">
+                                    <h3>🚀 Quick Start Guide</h3>
+                                    <ul>
+                                        <li>📄 <strong>Add your documents</strong> - Click the "Add Document" button to start tracking</li>
+                                        <li>🔔 <strong>Get reminders</strong> - We'll email you before documents expire</li>
+                                        <li>📊 <strong>Track everything</strong> - See all your documents in one dashboard</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="tip">
+                                    <h3>💡 Pro Tips</h3>
+                                    <ul>
+                                        <li>Import multiple documents at once using <strong>CSV import</strong></li>
+                                        <li>Set <strong>realistic expiry dates</strong> to get timely reminders</li>
+                                        <li>Renew documents with one click when they expire</li>
+                                    </ul>
+                                </div>
+                                
+                                <p style="text-align: center; margin: 30px 0;">
+                                    <a href="https://tracker.fritt.org/" class="button">Go to Your Dashboard →</a>
+                                </p>
+                                
+                                <p style="color: #6b7280; font-size: 14px;">You're on the <strong>Free plan</strong> which includes up to 10 documents. Upgrade anytime for unlimited tracking.</p>
+                            </div>
+                            <div class="footer">
+                                <p>Need help? Reply to this email - we're here to help!</p>
+                                <p style="font-size: 12px;">
+                                    <a href="https://tracker.fritt.org/terms" style="color: #6b7280;">Terms</a> • 
+                                    <a href="https://tracker.fritt.org/privacy" style="color: #6b7280;">Privacy</a>
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                """,
+                "text": f"""
+                    Welcome to Fritt Tracker, {user_name}!
+                    
+                    Your email has been verified successfully! You're all set to start tracking your important documents.
+                    
+                    Quick Start Guide:
+                    - Add your documents - Click "Add Document" to start tracking
+                    - Get reminders - We'll email you before documents expire
+                    - Track everything - See all your documents in one dashboard
+                    
+                    Pro Tips:
+                    - Import multiple documents at once using CSV import
+                    - Set realistic expiry dates to get timely reminders
+                    - Renew documents with one click when they expire
+                    
+                    Go to Your Dashboard: https://tracker.fritt.org/
+                    
+                    You're on the Free plan which includes up to 10 documents. Upgrade anytime for unlimited tracking.
+                    
+                    Need help? Reply to this email - we're here to help!
+                    
+                    ---
+                    Fritt Tracker - Keep track of your important documents
+                    https://tracker.fritt.org
+                """
+            },
+            timeout=10
+        )
+        
+        if response.status_code >= 400:
+            print(f"Warning: Resend error sending welcome email: {response.text}")
+            return False
+        return True
+    except Exception as e:
+        print(f"Error sending welcome email: {e}")
+        return False
 
 def send_password_reset_email(user_email, reset_link):
-    """
-    Emails a password reset link via Resend's HTTPS API. Any failure (bad
-    API key, Resend outage, unverified recipient, etc.) is caught and
-    logged rather than crashing the request - the caller shows the same
-    generic "check your email" message either way, so we don't reveal
-    whether sending worked.
-    """
     try:
         response = requests.post(
             "https://api.resend.com/emails",
@@ -232,6 +534,15 @@ def send_password_reset_email(user_email, reset_link):
                     <p>We received a request to reset your Fritt Tracker password.</p>
                     <p><a href="{reset_link}">Click here to choose a new password</a></p>
                     <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+                """,
+                "text": f"""
+                    We received a request to reset your Fritt Tracker password.
+                    
+                    Click here to choose a new password: {reset_link}
+                    
+                    This link expires in 1 hour.
+                    
+                    If you didn't request this, you can safely ignore this email.
                 """
             },
             timeout=10
@@ -241,7 +552,97 @@ def send_password_reset_email(user_email, reset_link):
     except Exception as e:
         print(f"Warning: failed to send password reset email: {e}")
 
-
+def send_verification_email(user_email, user_id):
+    """
+    Send email verification link to a new user.
+    """
+    try:
+        # Create verification token
+        token = secrets.token_urlsafe(32)
+        expiry = datetime.now(timezone.utc) + timedelta(hours=24)
+        
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET verification_token = %s, verification_token_expiry = %s, email_verification_sent_at = %s WHERE id = %s",
+                (token, expiry, datetime.now(timezone.utc), user_id)
+            )
+            conn.commit()
+            cursor.close()
+        finally:
+            conn.close()
+        
+        verification_link = url_for("verify_email", token=token, _external=True)
+        
+        # Send via Resend
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={
+                "from": RESEND_FROM_EMAIL,
+                "to": [user_email],
+                "subject": "Verify your email address for Fritt Tracker",
+                "html": f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                            .header {{ background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+                            .content {{ padding: 30px; background: #f9fafb; }}
+                            .button {{ background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }}
+                            .footer {{ text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <h1>Welcome to Fritt Tracker! 🎉</h1>
+                            </div>
+                            <div class="content">
+                                <p>Thanks for creating an account. Please verify your email address to get started.</p>
+                                <p style="text-align: center; margin: 30px 0;">
+                                    <a href="{verification_link}" class="button">Verify Email Address</a>
+                                </p>
+                                <p>This link expires in <strong>24 hours</strong>.</p>
+                                <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, you can safely ignore this email.</p>
+                            </div>
+                            <div class="footer">
+                                <p>Fritt Tracker helps you keep track of your important documents and their expiry dates.</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                """,
+                "text": f"""
+                    Welcome to Fritt Tracker!
+                    
+                    Thanks for creating an account. Please verify your email address to get started.
+                    
+                    Verify your email here: {verification_link}
+                    
+                    This link expires in 24 hours.
+                    
+                    If you didn't create an account, you can safely ignore this email.
+                    
+                    ---
+                    Fritt Tracker helps you keep track of your important documents and their expiry dates.
+                    Visit us at: https://tracker.fritt.org
+                """
+            },
+            timeout=10
+        )
+        
+        if response.status_code >= 400:
+            print(f"Warning: Resend error sending verification email: {response.text}")
+            return False
+        return True
+    except Exception as e:
+        print(f"Warning: failed to send verification email: {e}")
+        return False
+     
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP (see note above) ---
 # def allowed_file(filename):
 #     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -294,14 +695,19 @@ def get_status(expiry_date_str):
         return days_left, "Expired", "black", "⚫"
 
 
-def require_login():
+def require_verified():
     """
-    Call this at the top of any route that should only be visible to
-    logged-in users. Returns a redirect to /login if nobody is logged
-    in, or None if it's safe to continue.
+    Check if user is logged in AND their email is verified.
     """
     if not session.get("user_id"):
         return redirect(url_for("login"))
+    
+    user_id = session["user_id"]
+    if not is_email_verified(user_id):
+        flash("⚠️ Please verify your email address to access all features.", "warning")
+        return redirect(url_for("resend_verification"))
+    
+    return None
 
 
 def get_owned_document(doc_id, user_id):
@@ -374,6 +780,8 @@ def get_pricing(region='us'):
             'yearly': '25,000',
             'monthly_raw': 2500,
             'yearly_raw': 25000,
+            'vip_monthly': '7,500',
+            'vip_yearly': '75,000',
             'region_name': 'Nigeria'
         },
         'uk': {
@@ -382,6 +790,8 @@ def get_pricing(region='us'):
             'yearly': '39.99',
             'monthly_raw': 3.99,
             'yearly_raw': 39.99,
+            'vip_monthly': '11.99',
+            'vip_yearly': '119.99',
             'region_name': 'United Kingdom'
         },
         'us': {
@@ -390,6 +800,8 @@ def get_pricing(region='us'):
             'yearly': '49.99',
             'monthly_raw': 4.99,
             'yearly_raw': 49.99,
+            'vip_monthly': '14.99',
+            'vip_yearly': '149.99',
             'region_name': 'Worldwide'
         }
     }
@@ -429,8 +841,52 @@ def home():
         region = get_user_region()
         pricing = get_pricing(region)
         return render_template("landing.html", pricing=pricing)
+        pass
 
     user_id = session["user_id"]
+
+    # Check if Pro subscription expired
+    sub_status = get_subscription_status(user_id)
+    if sub_status['tier'] == 'pro' and not sub_status['is_active']:
+        # Pro expired - trim documents and revert to free
+        deleted_count = trim_documents_to_free_limit(user_id)
+        
+        # Update user to free tier
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE users 
+                SET subscription_tier = 'free', 
+                    subscription_status = 'expired',
+                    subscription_expiry = NULL
+                WHERE id = %s
+            """, (user_id,))
+            conn.commit()
+            cursor.close()
+        finally:
+            conn.close()
+        
+        if deleted_count > 0:
+            flash(
+                f"⚠️ Your Pro trial has expired. We've kept your 20 most important documents "
+                f"(farthest from expiry) and removed {deleted_count} documents. "
+                f"Upgrade to Pro to track more than 20 documents.",
+                "warning"
+            )
+        else:
+            flash(
+                "⚠️ Your Pro trial has expired. You're now on the Free plan with a 20-document limit. "
+                "Upgrade to Pro to track more documents.",
+                "warning"
+            )
+        
+        # Refresh the page to show updated status
+        return redirect(url_for("home"))
+    
+    # Continue with normal dashboard
+
+    doc_count = get_document_count(user_id)
     search_query = request.args.get("q", "").strip()
     status_filter = request.args.get("status", "")
 
@@ -459,13 +915,27 @@ def home():
             # "has_file" removed - file upload feature is disabled for MVP.
         })
 
-    return render_template("index.html", documents=documents)
+    # Get subscription info for the warning banner
+    sub_status = get_subscription_status(user_id)
+
+    return render_template(
+        "index.html", 
+        documents=documents, 
+        doc_count=doc_count,  
+        subscription_tier=sub_status['tier'],
+        subscription_expiry=sub_status['expiry'],
+        now=datetime.now(timezone.utc))
 
 @app.route("/add", methods=["GET", "POST"])
 def add_document():
-    auth = require_login()
+    auth = require_verified()
     if auth:
         return auth
+
+    # Check subscription limit
+    if not can_add_document(session["user_id"]):
+        flash("⚠️  You've reached the 20-document limit on the Free plan. Upgrade to Pro for unlimited documents.", "warning")
+        return redirect(url_for("pricing"))  # You'll need a pricing page
 
     error = None
 
@@ -487,7 +957,7 @@ def add_document():
         #     file = request.files.get("document_file")
         #     if file and file.filename:
         #         if allowed_file(file.filename):
-        #             unique_name = f"{session['user_id']}_{int(datetime.utcnow().timestamp())}_{secure_filename(file.filename)}"
+        #             unique_name = f"{session['user_id']}_{int(datetime.now(timezone.utc).timestamp())}_{secure_filename(file.filename)}"
         #             file.save(os.path.join(app.config["UPLOAD_FOLDER"], unique_name))
         #             file_path = unique_name
         #         else:
@@ -523,7 +993,7 @@ def add_document():
 
 @app.route("/delete/<int:doc_id>", methods=["POST"])
 def delete_document(doc_id):
-    auth = require_login()
+    auth = require_verified()
     if auth:
         return auth
 
@@ -553,7 +1023,7 @@ def delete_document(doc_id):
 
 @app.route("/edit/<int:doc_id>", methods=["GET", "POST"])
 def edit_document(doc_id):
-    auth = require_login()
+    auth = require_verified()
     if auth:
         return auth
 
@@ -596,7 +1066,7 @@ def edit_document(doc_id):
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP (see note near the top) ---
 # @app.route("/view/<int:doc_id>")
 # def view_file(doc_id):
-#     auth = require_login()
+#     auth = require_verified()
 #     if auth:
 #         return auth
 #
@@ -631,22 +1101,104 @@ def register():
                     # RETURNING id hands back the new row's ID in the same
                     # query - Postgres doesn't have SQLite's cursor.lastrowid.
                     cursor.execute(
-                        "INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id",
-                        (email, password_hash)
+                        "INSERT INTO users (email, password_hash, email_verified) VALUES (%s, %s, %s) RETURNING id",
+                        (email, password_hash, False)
                     )
                     new_user_id = cursor.fetchone()[0]
                     conn.commit()
-                    session["user_id"] = new_user_id
-                    session["email"] = email
-                cursor.close()
+
+                    # Send verification email
+                    send_verification_email(email, new_user_id)
+
+                    # session["user_id"] = new_user_id
+                    # session["email"] = email
+                    cursor.close()
+                conn.commit()
             finally:
                 conn.close()
 
             if not error:
-                return redirect("/")
+                flash("✅ Account created! Please check your email to verify your address.", "success")
+                return redirect(url_for("login"))
 
     return render_template("register.html", error=error)
 
+@app.route("/verify-email/<token>")
+def verify_email(token):
+    """Verify a user's email address."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, email FROM users WHERE verification_token = %s AND verification_token_expiry > %s AND email_verified = FALSE",
+            (token, datetime.now(timezone.utc))
+        )
+        user = cursor.fetchone()
+        
+        if user:
+            user_id, email = user
+            cursor.execute(
+                "UPDATE users SET email_verified = TRUE, verification_token = NULL, verification_token_expiry = NULL WHERE id = %s",
+                (user_id,)
+            )
+            conn.commit()
+
+            # Send welcome email
+            # send_welcome_email(email, user_id)
+            
+            # Log them in automatically
+            session["user_id"] = user_id
+            session["email"] = email
+            
+            flash("✅ Email verified successfully! Welcome to Fritt Tracker.", "success")
+            return redirect("/")
+        else:
+            # Check if token expired or already used
+            cursor.execute(
+                "SELECT id, email_verified FROM users WHERE verification_token = %s",
+                (token,)
+            )
+            expired_user = cursor.fetchone()
+            
+            if expired_user and expired_user[1]:
+                flash("ℹ️ This email is already verified. Please log in.", "info")
+                return redirect(url_for("login"))
+            else:
+                flash("❌ This verification link has expired or is invalid. Please request a new one.", "error")
+                return render_template("verify_email.html", invalid=True)
+        cursor.close()
+    finally:
+        conn.close()
+
+@app.route("/resend-verification", methods=["GET", "POST"])
+@limiter.limit("3 per hour")
+def resend_verification():
+    error = None
+    success = None
+    
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        
+        if not email:
+            error = "Please enter your email address."
+        else:
+            user = get_user_by_email(email)
+            
+            if user and len(user) >= 4:  # Check we have all 4 elements
+                user_id = user[0] # id
+                email_verified = user[3] # email_verified
+
+                if not email_verified:
+                    if send_verification_email(email, user_id):
+                        success = "A new verification email has been sent. Please check your inbox."
+                    else:
+                        error = "Could not send verification email. Please try again later."
+                else:
+                    error = "This email is already verified. Please log in."
+            else:
+                error = "No unverified account found with that email address."
+    
+    return render_template("resend_verification.html", error=error, success=success)
 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("10 per minute")
@@ -688,7 +1240,7 @@ def forgot_password():
         if user:
             user_id = user[0]
             token = secrets.token_urlsafe(32)
-            expiry = datetime.utcnow() + RESET_TOKEN_LIFETIME
+            expiry = datetime.now(timezone.utc) + RESET_TOKEN_LIFETIME
 
             conn = get_db()
             try:
@@ -753,7 +1305,7 @@ def reset_password(token):
 
 @app.route("/change-password", methods=["GET", "POST"])
 def change_password():
-    auth = require_login()
+    auth = require_verified()
     if auth:
         return auth
 
@@ -795,7 +1347,7 @@ def change_password():
 
 @app.route("/delete-account", methods=["GET", "POST"])
 def delete_account():
-    auth = require_login()
+    auth = require_verified()
     if auth:
         return auth
 
@@ -841,6 +1393,13 @@ def logout():
 def feedback():
     return render_template("feedback.html")
 
+@app.route("/pricing")
+def pricing():
+    """Pricing page showing subscription tiers."""
+    region = get_user_region()
+    pricing = get_pricing(region)
+    return render_template("pricing.html", pricing=pricing)
+
 # --- LEGAL PAGES ---
 @app.route("/terms")
 def terms():
@@ -853,7 +1412,7 @@ def privacy():
 @app.route("/renewed/<int:doc_id>", methods=["GET", "POST"])
 def mark_renewed(doc_id):
     """Mark a document as renewed and set a new expiry date."""
-    auth = require_login()
+    auth = require_verified()
     if auth:
         return auth
 
@@ -917,7 +1476,7 @@ def run_reminders():
 
 @app.route("/import-csv", methods=["GET", "POST"])
 def import_csv():
-    auth = require_login()
+    auth = require_verified()
     if auth:
         return auth
 
@@ -1010,6 +1569,38 @@ def import_csv():
                     error = f"Error reading file: {str(e)}"
 
     return render_template("import_csv.html", error=error)
+
+@app.route("/subscribe", methods=["POST"])
+@limiter.limit("5 per hour")
+def subscribe_newsletter():
+    email = request.form.get("email", "").strip().lower()
+    
+    if not email:
+        flash("Please enter your email address.", "error")
+        return redirect(url_for("home"))
+    
+    # Store in newsletter_subscribers table
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO newsletter_subscribers (email, subscribed_at) VALUES (%s, %s) ON CONFLICT (email) DO NOTHING",
+            (email, datetime.now(timezone.utc))
+        )
+        conn.commit()
+        cursor.close()
+    finally:
+        conn.close()
+    
+    flash("✅ Thanks for subscribing! You'll hear from us soon.", "success")
+    return redirect(url_for("home"))
+
+# Health check endpoint that bypasses rate limiting
+@app.route("/health")
+@limiter.exempt
+def health_check():
+    """Health check endpoint for UptimeRobot — no rate limit."""
+    return "OK", 200
 
 if __name__ == "__main__":
     # In production (Render), debug should be False so users see your

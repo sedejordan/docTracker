@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pricing - Fritt Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="{{ url_for('home') }}" class="text-2xl font-bold text-blue-600">Fritt Tracker</a>
+            <div class="space-x-4">
+                <a href="{{ url_for('login') }}" class="text-gray-600 hover:text-gray-800">Log In</a>
+                <a href="{{ url_for('register') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Pricing Header -->
+    <div class="text-center py-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h1>
+        <p class="text-xl text-gray-600">Choose the plan that works best for you</p>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="container mx-auto px-4 max-w-6xl">
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Free Plan -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition">
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Free</h2>
+                    <p class="text-gray-500 mt-1">Perfect for getting started</p>
+                    <div class="mt-4">
+                        <span class="text-4xl font-bold">$0</span>
+                        <span class="text-gray-500">/month</span>
+                    </div>
+                    <ul class="mt-6 space-y-3">
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            20 documents
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Email reminders
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Basic tracking
+                        </li>
+                        <li class="flex items-center text-gray-400">
+                            <i class="fas fa-times mr-2"></i>
+                            CSV import
+                        </li>
+                        <li class="flex items-center text-gray-400">
+                            <i class="fas fa-times mr-2"></i>
+                            Priority support
+                        </li>
+                    </ul>
+                    <a href="{{ url_for('register') }}" class="block mt-6 text-center bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">Get Started</a>
+                </div>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-blue-500 transform scale-105">
+                <div class="bg-blue-500 text-white text-center py-2 text-sm font-semibold">MOST POPULAR</div>
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Pro</h2>
+                    <p class="text-gray-500 mt-1">For serious document management</p>
+                    <div class="mt-4">
+                        <span class="text-4xl font-bold">$4.99</span>
+                        <span class="text-gray-500">/month</span>
+                        <p class="text-sm text-gray-500 mt-1">or $49.99/year (save 16%)</p>
+                    </div>
+                    <ul class="mt-6 space-y-3">
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            100 documents
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Email reminders
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            CSV import
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Priority support
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Advanced tracking
+                        </li>
+                    </ul>
+                    <a href="{{ url_for('register') }}" class="block mt-6 text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Start Free Trial</a>
+                </div>
+            </div>
+
+            <!-- Business Plan -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition">
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Business</h2>
+                    <p class="text-gray-500 mt-1">For teams and power users</p>
+                    <div class="mt-4">
+                        <span class="text-4xl font-bold">$14.99</span>
+                        <span class="text-gray-500">/month</span>
+                        <p class="text-sm text-gray-500 mt-1">or $149.99/year (save 16%)</p>
+                    </div>
+                    <ul class="mt-6 space-y-3">
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            500 documents
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Email reminders
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            CSV import
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Priority support
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Advanced analytics
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i>
+                            Team management
+                        </li>
+                    </ul>
+                    <a href="{{ url_for('register') }}" class="block mt-6 text-center bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="mt-16 max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+            <div class="space-y-4">
+                <div class="bg-white rounded-lg p-6 shadow-sm">
+                    <h3 class="font-semibold text-gray-800">What happens when I exceed my document limit?</h3>
+                    <p class="text-gray-600 mt-2">You'll receive a notification and can upgrade your plan at any time. Your existing documents will remain accessible.</p>
+                </div>
+                <div class="bg-white rounded-lg p-6 shadow-sm">
+                    <h3 class="font-semibold text-gray-800">Can I cancel anytime?</h3>
+                    <p class="text-gray-600 mt-2">Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period.</p>
+                </div>
+                <div class="bg-white rounded-lg p-6 shadow-sm">
+                    <h3 class="font-semibold text-gray-800">Is there a free trial?</h3>
+                    <p class="text-gray-600 mt-2">All paid plans come with a 14-day free trial. No credit card required to start.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="text-center py-12">
+            <p class="text-gray-600 mb-4">Still have questions?</p>
+            <a href="mailto:support@fritt.org" class="text-blue-600 hover:underline">Contact our support team →</a>
+        </div>
+    </div>
+</body>
+</html>

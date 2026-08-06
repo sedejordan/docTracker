@@ -26,6 +26,54 @@
   </form>
 </div>
 
+<!-- Add this near the top of your dashboard, before the progress bar -->
+{% if subscription_tier == 'pro' and subscription_expiry %}
+    {% set days_left = ((subscription_expiry - now).days) %}
+    {% if days_left <= 7 %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <div class="flex items-start gap-3">
+                <span class="text-yellow-600 text-xl">⚠️</span>
+                <div>
+                    <p class="text-sm text-yellow-800">
+                        <strong>Your Pro trial expires in {{ days_left }} days.</strong>
+                    </p>
+                    <p class="text-xs text-yellow-700 mt-1">
+                        After expiry, we'll keep your <strong>20 documents farthest from expiry</strong> 
+                        and remove the rest. 
+                        <a href="{{ url_for('pricing') }}" class="underline font-medium">Upgrade now</a> 
+                        to keep all your documents.
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endif %}
+
+<!-- Add this near the top of your dashboard -->
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+    <div class="flex justify-between items-center">
+        <span class="text-sm text-gray-700">
+            📄 You've used <strong>{{ doc_count }}</strong> of <strong>20</strong> documents on the Free plan
+        </span>
+        {% if doc_count >= 15 %}
+            <a href="{{ url_for('pricing') }}" class="text-sm text-blue-600 hover:underline">
+                Upgrade for more →
+            </a>
+        {% endif %}
+    </div>
+    <!-- Progress bar - Fixed CSS -->
+    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+        {% set percentage = (doc_count / 20 * 100) %}
+        {% if percentage > 100 %}
+            {% set percentage = 100 %}
+        {% endif %}
+        <div class="bg-blue-600 h-2 rounded-full" style="width: {{ percentage }}%;"></div>
+    </div>
+    {% if doc_count >= 20 %}
+        <p class="text-xs text-red-600 mt-1">⚠️ You've reached the document limit. Upgrade to add more.</p>
+    {% endif %}
+</div>
+
 {% if documents %}
 <div class="bg-white border border-line rounded-xl overflow-x-auto">
   <table class="w-full text-sm">

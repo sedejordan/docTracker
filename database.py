@@ -56,6 +56,35 @@ def init_db():
     # columns automatically without needing manual/shell access.
     cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;")
     cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP;")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_sent_at TIMESTAMP;")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(50) DEFAULT 'free';")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'active';")
+    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expiry TIMESTAMP;")
+
+    # cursor.execute("""
+    #     -- Update users with more than 20 documents to Pro tier
+    #     -- This prevents them from being locked out when the limit is enforced
+    
+    #     UPDATE users 
+    #     SET subscription_tier = 'pro' 
+    #     WHERE id IN (
+    #         SELECT user_id 
+    #         FROM documents 
+    #         GROUP BY user_id 
+    #         HAVING COUNT(*) > 20
+    #     );
+    # """)
+
+    # cursor.execute("""
+    #     -- Set subscription_status and expiry for migrated users
+    #     UPDATE users 
+    #     SET subscription_status = 'active',
+    #     WHERE subscription_tier = 'pro' 
+    #         AND subscription_status = 'free';  -- Only update if they were on free tier
+    # """)
 
     # file_path column intentionally omitted - the file upload feature
     # is disabled for the MVP. See app.py for matching notes on where
@@ -137,8 +166,81 @@ def init_db():
         # If you want to see the actual error details
         # raise
 
+    cursor.execute("""
+                CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                unsubscribed_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE);
+            """)
+
+    cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
+                CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);
+                CREATE INDEX IF NOT EXISTS idx_newsletter_email ON newsletter_subscribers(email);
+            """)
+
     cursor.close()
     conn.close()
+
+def create_verification_token(user_id):
+    """Create and store a verification token for a user."""
+    token = secrets.token_urlsafe(32)
+    expiry = datetime.utcnow() + timedelta(hours=24)  # 24 hours to verify
+    
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET verification_token = %s, verification_token_expiry = %s, email_verification_sent_at = %s WHERE id = %s",
+            (token, expiry, datetime.utcnow(), user_id)
+        )
+        conn.commit()
+        cursor.close()
+        return token
+    finally:
+        conn.close()
+
+def verify_email_token(token):
+    """Verify a user's email using their verification token."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, email FROM users WHERE verification_token = %s AND verification_token_expiry > %s AND email_verified = FALSE",
+            (token, datetime.utcnow())
+        )
+        user = cursor.fetchone()
+        
+        if user:
+            # Mark email as verified and clear token
+            cursor.execute(
+                "UPDATE users SET email_verified = TRUE, verification_token = NULL, verification_token_expiry = NULL WHERE id = %s",
+                (user[0],)
+            )
+            conn.commit()
+            cursor.close()
+            return user
+        cursor.close()
+        return None
+    finally:
+        conn.close()
+
+def is_email_verified(user_id):
+    """Check if a user's email is verified."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT email_verified FROM users WHERE id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        return result[0] if result else False
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
