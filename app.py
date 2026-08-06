@@ -1945,30 +1945,42 @@ def initiate_payment():
         return redirect(url_for("pricing"))
     
     try:
-        # Initialize payment with Flutterwave
-        response = rave.Payment.initialize({
-            'amount': amount,
+        # Get the base URL for redirect
+        base_url = os.environ.get("APP_URL", "tracker.fritt.org")
+        redirect_url = f"https://{base_url}{url_for('payment_callback')}"
+        
+        # Initialize payment with Flutterwave using the correct syntax
+        payload = {
+            'amount': str(amount),
             'email': session['email'],
             'currency': currency,
             'tx_ref': f"fritt_{session['user_id']}_{int(time.time())}",
             'payment_plan': int(plan_id),  # Enables subscription
-            'redirect_url': url_for('payment_callback', _external=True),
+            'redirect_url': redirect_url,
             'meta': {
                 'user_id': session['user_id'],
                 'plan_type': plan_type,
                 'region': region
             }
-        })
+        }
+        
+        # Use the correct rave_python method
+        response = rave.Payment.initialize(payload)
         
         # Store transaction reference in session
-        session['tx_ref'] = response['data']['tx_ref']
-        
-        # Redirect to Flutterwave checkout
-        return redirect(response['data']['link'])
+        if response and 'data' in response:
+            session['tx_ref'] = response['data']['tx_ref']
+            # Redirect to Flutterwave checkout
+            return redirect(response['data']['link'])
+        else:
+            raise Exception("Invalid response from Flutterwave")
         
     except Exception as e:
         print(f"Payment error: {e}")
-        flash("Payment initialization failed. Please try again.", "error")
+        print(f"Error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Payment initialization failed: {str(e)}", "error")
         return redirect(url_for("pricing"))
 
 @app.route("/payment/callback")
@@ -2087,11 +2099,10 @@ def flutterwave_webhook():
         event = data.get('event')
         
         if event == 'charge.completed':
-            # Handle successful payment
             print("✅ Payment completed")
             
-            webhook_data = data.get('data', {})
-            meta = webhook_data.get('meta', {})
+            # Extract user_id from meta
+            meta = data.get('data', {}).get('meta', {})
             user_id = meta.get('user_id')
             
             if user_id:
@@ -2116,35 +2127,17 @@ def flutterwave_webhook():
         
         elif event == 'subscription.cancelled':
             print("❌ Subscription cancelled")
-            webhook_data = data.get('data', {})
-            meta = webhook_data.get('meta', {})
+            meta = data.get('data', {}).get('meta', {})
             user_id = meta.get('user_id')
-            
             if user_id:
                 update_user_to_free(user_id)
-                print(f"✅ User {user_id} downgraded to Free due to cancellation")
         
         elif event == 'subscription.expired':
             print("⏰ Subscription expired")
-            webhook_data = data.get('data', {})
-            meta = webhook_data.get('meta', {})
+            meta = data.get('data', {}).get('meta', {})
             user_id = meta.get('user_id')
-            
             if user_id:
                 update_user_to_free(user_id)
-                print(f"✅ User {user_id} downgraded to Free due to expiry")
-        
-        elif event == 'charge.failed':
-            print("❌ Payment failed")
-            webhook_data = data.get('data', {})
-            meta = webhook_data.get('meta', {})
-            user_id = meta.get('user_id')
-            if user_id:
-                print(f"⚠️ Payment failed for user {user_id}")
-                # Optionally send email notification
-        
-        else:
-            print(f"ℹ️ Unhandled webhook event: {event}")
         
         return "OK", 200
         
