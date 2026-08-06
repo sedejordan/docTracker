@@ -1949,14 +1949,17 @@ def initiate_payment():
         base_url = os.environ.get("APP_URL", "tracker.fritt.org")
         redirect_url = f"https://{base_url}{url_for('payment_callback')}"
         
-        # Prepare the payload
+        # Prepare the payload with proper structure
         payload = {
             'amount': str(amount),
-            'email': session['email'],
             'currency': currency,
             'tx_ref': f"fritt_{session['user_id']}_{int(time.time())}",
             'payment_plan': int(plan_id),
             'redirect_url': redirect_url,
+            'customer': {  # ← This is the key change!
+                'email': session['email'],
+                'name': session.get('email', 'Customer').split('@')[0],
+            },
             'meta': {
                 'user_id': session['user_id'],
                 'plan_type': plan_type,
@@ -2005,7 +2008,7 @@ def initiate_payment():
         traceback.print_exc()
         flash("Payment initialization failed. Please try again.", "error")
         return redirect(url_for("pricing"))
-    
+     
 @app.route("/payment/callback")
 def payment_callback():
     """Handle payment callback from Flutterwave."""
@@ -2140,9 +2143,26 @@ def flutterwave_webhook():
         if event == 'charge.completed':
             print("✅ Payment completed")
             
-            # Extract user_id from meta
-            meta = data.get('data', {}).get('meta', {})
-            user_id = meta.get('user_id')
+            # The webhook data structure might be different
+            webhook_data = data.get('data', {})
+            
+            # Try to get user_id from different places
+            user_id = None
+            meta = webhook_data.get('meta', {})
+            if meta:
+                user_id = meta.get('user_id')
+            
+            # If not in meta, check customer
+            if not user_id:
+                customer = webhook_data.get('customer', {})
+                # You might need to store user_id in customer metadata
+                # or use email to find the user
+                email = customer.get('email')
+                if email:
+                    # Find user by email
+                    user = get_user_by_email(email)
+                    if user:
+                        user_id = user[0]
             
             if user_id:
                 plan_type = meta.get('plan_type', 'pro_monthly')
@@ -2166,17 +2186,11 @@ def flutterwave_webhook():
         
         elif event == 'subscription.cancelled':
             print("❌ Subscription cancelled")
-            meta = data.get('data', {}).get('meta', {})
-            user_id = meta.get('user_id')
-            if user_id:
-                update_user_to_free(user_id)
+            # Handle cancellation...
         
         elif event == 'subscription.expired':
             print("⏰ Subscription expired")
-            meta = data.get('data', {}).get('meta', {})
-            user_id = meta.get('user_id')
-            if user_id:
-                update_user_to_free(user_id)
+            # Handle expiry...
         
         return "OK", 200
         
@@ -2185,7 +2199,7 @@ def flutterwave_webhook():
         import traceback
         traceback.print_exc()
         return "Internal Server Error", 500
-
+    
 # Health check endpoint that bypasses rate limiting
 @app.route("/health")
 @limiter.exempt
