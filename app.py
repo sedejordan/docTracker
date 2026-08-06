@@ -523,6 +523,10 @@ def send_welcome_email(user_email, user_id):
 
 def send_password_reset_email(user_email, reset_link):
     try:
+        # Force HTTPS in the reset link
+        if reset_link.startswith('http://'):
+            reset_link = reset_link.replace('http://', 'https://')
+        
         response = requests.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
@@ -534,6 +538,7 @@ def send_password_reset_email(user_email, reset_link):
                     <p>We received a request to reset your Fritt Tracker password.</p>
                     <p><a href="{reset_link}">Click here to choose a new password</a></p>
                     <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+                    <p style="font-size: 14px; color: #6b7280;">Or copy this link: {reset_link}</p>
                 """,
                 "text": f"""
                     We received a request to reset your Fritt Tracker password.
@@ -551,7 +556,7 @@ def send_password_reset_email(user_email, reset_link):
             print(f"Warning: Resend returned an error sending password reset email: {response.text}")
     except Exception as e:
         print(f"Warning: failed to send password reset email: {e}")
-
+        
 def send_verification_email(user_email, user_id):
     """
     Send email verification link to a new user.
@@ -573,7 +578,9 @@ def send_verification_email(user_email, user_id):
         finally:
             conn.close()
         
-        verification_link = url_for("verify_email", token=token, _external=True)
+        # Force HTTPS in the verification link
+        base_url = os.environ.get("APP_URL", "tracker.fritt.org")
+        verification_link = f"https://{base_url}{url_for('verify_email', token=token)}"
         
         # Send via Resend
         response = requests.post(
@@ -604,7 +611,12 @@ def send_verification_email(user_email, user_id):
                             <div class="content">
                                 <p>Thanks for creating an account. Please verify your email address to get started.</p>
                                 <p style="text-align: center; margin: 30px 0;">
-                                    <a href="{verification_link}" class="button">Verify Email Address</a>
+                                    <a href="{verification_link}" class="button" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Verify Email Address</a>
+                                </p>
+                                <p style="text-align: center; margin: 30px 0;">
+                                    Or copy and paste this link into your browser:
+                                    <br>
+                                    <span style="word-break: break-all; color: #2563eb; font-size: 14px;">{verification_link}</span>
                                 </p>
                                 <p>This link expires in <strong>24 hours</strong>.</p>
                                 <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, you can safely ignore this email.</p>
@@ -621,7 +633,8 @@ def send_verification_email(user_email, user_id):
                     
                     Thanks for creating an account. Please verify your email address to get started.
                     
-                    Verify your email here: {verification_link}
+                    Verify your email by visiting this link:
+                    {verification_link}
                     
                     This link expires in 24 hours.
                     
@@ -642,7 +655,7 @@ def send_verification_email(user_email, user_id):
     except Exception as e:
         print(f"Warning: failed to send verification email: {e}")
         return False
-     
+       
 # --- FILE UPLOAD FEATURE: DISABLED FOR MVP (see note above) ---
 # def allowed_file(filename):
 #     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
