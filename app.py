@@ -1021,26 +1021,26 @@ def update_user_to_free(user_id):
         put_db(conn)
 
 def verify_flutterwave_webhook(data, signature):
-    """
-    Verify webhook signature for v3.
-    """
+    """Verify webhook signature."""
     if not FLW_WEBHOOK_SECRET:
         print("⚠️ FLW_WEBHOOK_SECRET not set - webhook verification disabled")
-        return True
+        return True  # Disabled for now, but you should set it
     
     if not signature:
         print("❌ No signature provided")
         return False
     
-    # Compute expected signature
-    expected_signature = hmac.new(
-        FLW_WEBHOOK_SECRET.encode('utf-8'),
-        json.dumps(data).encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
-    
-    return hmac.compare_digest(expected_signature, signature)
-
+    try:
+        expected_signature = hmac.new(
+            FLW_WEBHOOK_SECRET.encode('utf-8'),
+            json.dumps(data).encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(expected_signature, signature)
+    except Exception as e:
+        print(f"❌ Signature verification error: {e}")
+        return False
 
 # --- CUSTOM ERROR PAGES ---
 # These replace Flask's default debug/error pages with branded versions
