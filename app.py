@@ -45,7 +45,7 @@ from functools import lru_cache
 import time
 from rave_python import Rave
 
-from database import init_db, get_db
+from database import init_db, get_db, put_db
 
 # CHANGE!!!
 # A secret token (store in environment variables as TRIGGER_SECRET)
@@ -185,7 +185,7 @@ def get_user_subscription(user_id):
         cursor.close()
         return result[0] if result else 'free'
     finally:
-        conn.close()
+        put_db(conn)
 
 def can_add_document(user_id):
     """Check if user can add more documents based on subscription."""
@@ -208,7 +208,7 @@ def can_add_document(user_id):
             conn.commit()
             cursor.close()
         finally:
-            conn.close()
+            put_db(conn)
         # User is now on free tier
         tier = 'free'
     else:
@@ -233,7 +233,7 @@ def can_add_document(user_id):
         cursor.close()
         return count < limit
     finally:
-        conn.close()
+        put_db(conn)
 
 def trim_documents_to_free_limit(user_id):
     """
@@ -276,7 +276,7 @@ def trim_documents_to_free_limit(user_id):
         
         return 0
     finally:
-        conn.close()
+        put_db(conn)
 
 def get_document_count(user_id):
     """Get the number of documents a user has."""
@@ -291,7 +291,7 @@ def get_document_count(user_id):
         cursor.close()
         return count
     finally:
-        conn.close()
+        put_db(conn)  # IMPORTANT: Always return connection
 
 # Render provides this automatically once a PostgreSQL database is
 # created and linked to this web service. See README for local setup.
@@ -351,7 +351,7 @@ def get_user_by_email(email):
             return user
         return None
     finally:
-        conn.close()
+        put_db(conn)
 
 def get_utc_now():
     """Helper function to get timezone-aware UTC datetime."""
@@ -372,7 +372,7 @@ def get_user_by_reset_token(token):
         user = cursor.fetchone()
         cursor.close()
     finally:
-        conn.close()
+        put_db(conn)
 
     if user is None:
         return None
@@ -410,7 +410,7 @@ def is_email_verified(user_id):
             return result[0]  # Returns True/False
         return False
     finally:
-        conn.close()
+        put_db(conn)
 
 def get_subscription_status(user_id):
     """Get user's subscription status and expiry."""
@@ -433,7 +433,7 @@ def get_subscription_status(user_id):
             # Check if subscription is active (status='active' and not expired)
             is_active = True
             if tier != 'free' and expiry is not None:
-                is_active = expiry > get_utc_now()
+                is_active = expiry > datetime.now(timezone.utc)
             elif tier == 'free':
                 is_active = True  # Free tier never expires
             else:
@@ -447,7 +447,7 @@ def get_subscription_status(user_id):
             }
         return {'tier': 'free', 'status': 'active', 'expiry': None, 'is_active': True}
     finally:
-        conn.close()
+        put_db(conn)  # IMPORTANT: Always return connection
 
 def send_welcome_email(user_email, user_id):
     """
@@ -463,7 +463,7 @@ def send_welcome_email(user_email, user_id):
             cursor.close()
             user_name = result[0].split('@')[0] if result else "there"
         finally:
-            conn.close()
+            put_db(conn)
         
         response = requests.post(
             "https://api.resend.com/emails",
@@ -622,7 +622,7 @@ def send_verification_email(user_email, user_id):
             conn.commit()
             cursor.close()
         finally:
-            conn.close()
+            put_db(conn)
         
         # Force HTTPS in the verification link
         base_url = os.environ.get("APP_URL", "tracker.fritt.org")
@@ -732,7 +732,7 @@ def get_documents(user_id, search_query=""):
         docs = cursor.fetchall()
         cursor.close()
     finally:
-        conn.close()
+        put_db(conn)
     return docs
 
 
@@ -787,7 +787,7 @@ def get_owned_document(doc_id, user_id):
         doc = cursor.fetchone()
         cursor.close()
     finally:
-        conn.close()
+        put_db(conn)
 
     if doc is None:
         return None
@@ -974,7 +974,7 @@ def home():
             conn.commit()
             cursor.close()
         finally:
-            conn.close()
+            put_db(conn)
         
         if deleted_count > 0:
             flash(
@@ -1094,7 +1094,7 @@ def add_document():
                     flash("✅ Document added successfully!", "success")
                 cursor.close()
             finally:
-                conn.close()
+                put_db(conn)
             return redirect("/")
 
     return render_template("add.html", error=error)
@@ -1118,7 +1118,7 @@ def delete_document(doc_id):
         conn.commit()
         cursor.close()
     finally:
-        conn.close()
+        put_db(conn)
 
     # --- FILE UPLOAD FEATURE: DISABLED FOR MVP (see note near the top) ---
     # if doc["file_path"]:
@@ -1165,7 +1165,7 @@ def edit_document(doc_id):
                     conn.commit()
                     cursor.close()
                 finally:
-                    conn.close()
+                    put_db(conn)
                 flash("✅ Document updated successfully!", "success")
                 return redirect("/")
 
@@ -1223,7 +1223,7 @@ def register():
                     cursor.close()
                 conn.commit()
             finally:
-                conn.close()
+                put_db(conn)
 
             if not error:
                 flash("✅ Account created! Please check your email to verify your address.", "success")
@@ -1276,7 +1276,7 @@ def verify_email(token):
                 return render_template("verify_email.html", invalid=True)
         cursor.close()
     finally:
-        conn.close()
+        put_db(conn)
 
 @app.route("/resend-verification", methods=["GET", "POST"])
 @limiter.limit("3 per hour")
@@ -1324,7 +1324,7 @@ def login():
             user = cursor.fetchone()
             cursor.close()
         finally:
-            conn.close()
+            put_db(conn)
 
         if user and check_password_hash(user[2], password):
             session["user_id"] = user[0]
@@ -1365,7 +1365,7 @@ def forgot_password():
                     conn.commit()
                     cursor.close()
                 finally:
-                    conn.close()
+                    put_db(conn)
 
                 reset_link = url_for("reset_password", token=token, _external=True)
                 # Force HTTPS
@@ -1418,7 +1418,7 @@ def reset_password(token):
                 conn.commit()
                 cursor.close()
             finally:
-                conn.close()
+                put_db(conn)
 
             flash("✅ Password reset successfully! Please log in with your new password.", "success")
             return redirect(url_for("login"))
@@ -1463,7 +1463,7 @@ def change_password():
 
             cursor.close()
         finally:
-            conn.close()
+            put_db(conn)
 
     return render_template("change_password.html", error=error, success=success)
 
@@ -1498,7 +1498,7 @@ def delete_account():
 
             cursor.close()
         finally:
-            conn.close()
+            put_db(conn)
 
         if not error:
             session.clear()
@@ -1594,7 +1594,7 @@ def mark_renewed(doc_id):
                     conn.commit()
                     cursor.close()
                 finally:
-                    conn.close()
+                    put_db(conn)
                 
                 flash("✅ Document renewed successfully! New expiry date set.", "success")
                 return redirect("/")
@@ -1697,7 +1697,7 @@ def import_csv():
                         
                         conn.commit()
                         cursor.close()
-                        conn.close()
+                        put_db(conn)
                         
                         if added > 0:
                             flash(f"✅ Successfully imported {added} documents! {failed} failed.", "success")
@@ -1713,30 +1713,29 @@ def import_csv():
 
     return render_template("import_csv.html", error=error)
 
-# @app.route("/subscribe", methods=["POST"])
-# @limiter.limit("5 per hour")
-# def subscribe_newsletter():
-#     email = request.form.get("email", "").strip().lower()
+@app.route("/newsletter/subscribe", methods=["POST"])  # Changed URL
+@limiter.limit("5 per hour")
+def subscribe_newsletter():
+    email = request.form.get("email", "").strip().lower()
     
-#     if not email:
-#         flash("Please enter your email address.", "error")
-#         return redirect(url_for("home"))
+    if not email:
+        flash("Please enter your email address.", "error")
+        return redirect(url_for("home"))
     
-#     # Store in newsletter_subscribers table
-#     conn = get_db()
-#     try:
-#         cursor = conn.cursor()
-#         cursor.execute(
-#             "INSERT INTO newsletter_subscribers (email, subscribed_at) VALUES (%s, %s) ON CONFLICT (email) DO NOTHING",
-#             (email, datetime.now(timezone.utc))
-#         )
-#         conn.commit()
-#         cursor.close()
-#     finally:
-#         conn.close()
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO newsletter_subscribers (email, subscribed_at) VALUES (%s, %s) ON CONFLICT (email) DO NOTHING",
+            (email, datetime.now(timezone.utc))
+        )
+        conn.commit()
+        cursor.close()
+    finally:
+        put_db(conn)  # Use put_db, not conn.close()
     
-#     flash("✅ Thanks for subscribing! You'll hear from us soon.", "success")
-#     return redirect(url_for("home"))
+    flash("✅ Thanks for subscribing! You'll hear from us soon.", "success")
+    return redirect(url_for("home"))
 
 
 @app.route("/subscribe/<plan_type>")
@@ -1898,7 +1897,7 @@ def payment_callback():
                 conn.commit()
                 cursor.close()
             finally:
-                conn.close()
+                put_db(conn)
             
             flash("✅ Payment successful! Your subscription is now active.", "success")
             return redirect(url_for("home"))
@@ -1940,9 +1939,31 @@ def newsletter_admin():
     cursor.execute("SELECT email, subscribed_at FROM newsletter_subscribers ORDER BY subscribed_at DESC")
     subscribers = cursor.fetchall()
     cursor.close()
-    conn.close()
+    put_db(conn)
     
     return render_template("admin/newsletter.html", subscribers=subscribers)
+
+@app.route("/webhook/flutterwave", methods=["POST"])
+def flutterwave_webhook():
+    """Handle Flutterwave webhook for subscription events."""
+    data = request.json
+    
+    # Verify webhook signature
+    # (You'll need to implement signature verification)
+    
+    if data['event'] == 'charge.completed':
+        # Handle successful payment
+        pass
+    elif data['event'] == 'subscription.cancelled':
+        # Handle subscription cancellation
+        user_id = data['data']['meta']['user_id']
+        update_user_to_free(user_id)
+    elif data['event'] == 'subscription.expired':
+        # Handle subscription expiry
+        user_id = data['data']['meta']['user_id']
+        update_user_to_free(user_id)
+    
+    return "OK", 200
 
 # Health check endpoint that bypasses rate limiting
 @app.route("/health")
