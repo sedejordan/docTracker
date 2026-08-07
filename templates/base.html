@@ -81,23 +81,25 @@
         </svg>
       </button>
 
-      <!-- Logged-out desktop buttons (hidden on mobile) -->
-      {% if not session.get("user_id") %}
-        <div class="hidden lg:flex gap-3">
-          <a href="/login" class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors">Log In</a>
-          <a href="/register" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">Sign Up Free</a>
-        </div>
-      {% endif %}
-      
-      <!-- Logged-in desktop buttons (shown on desktop) -->
-      {% if session.get("user_id") %}
-        <div class="hidden lg:flex gap-3">
-          <a href="/add" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
-          <a href="/import-csv" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">📥 Import CSV</a>
-          <a href="/change-password" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>
-          <a href="/logout" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Logout</a>
-        </div>
-      {% endif %}
+      <nav>
+        <!-- Logged-out desktop buttons (hidden on mobile) -->
+        {% if not session.get("user_id") %}
+          <div class="hidden lg:flex gap-3">
+            <a href="/login" class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors">Log In</a>
+            <a href="/register" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">Sign Up Free</a>
+          </div>
+        {% endif %}
+        
+        <!-- Logged-in desktop buttons (shown on desktop) -->
+        {% if session.get("user_id") %}
+          <div class="hidden lg:flex gap-3">
+            <a href="/add" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
+            <a href="/import-csv" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">📥 Import CSV</a>
+            <a href="/change-password" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>
+            <a href="/logout" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Logout</a>
+          </div>
+        {% endif %}
+      </nav>
     </div>
 
     <!-- Mobile navigation menu (hidden on desktop) -->
