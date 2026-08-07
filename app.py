@@ -1045,9 +1045,15 @@ def home():
 
     user_id = session["user_id"]
 
-    # Check if Pro subscription expired
+     # Get subscription status
     sub_status = get_subscription_status(user_id)
-    if sub_status['tier'] == 'pro' and not sub_status['is_active']:
+    tier = sub_status['tier']
+    
+    # Check if subscription is active
+    is_active = sub_status['is_active']
+    
+    # If Pro/VIP expired, downgrade to free and trim documents
+    if tier != 'free' and not is_active:
         deleted_count = trim_documents_to_free_limit(user_id)
         
         conn = get_db()
@@ -1079,21 +1085,24 @@ def home():
         
         if deleted_count > 0:
             flash(
-                f"⚠️ Your Pro trial has expired. We've kept your 20 most important documents "
+                f"⚠️ Your {tier} subscription has expired. We've kept your 20 most important documents "
                 f"(farthest from expiry) and removed {deleted_count} documents. "
-                f"Upgrade to Pro to track more than 20 documents.",
+                f"Upgrade to continue tracking more than 20 documents.",
                 "warning"
             )
         else:
             flash(
-                "⚠️ Your Pro trial has expired. You're now on the Free plan with a 20-document limit. "
-                "Upgrade to Pro to track more documents.",
+                f"⚠️ Your {tier} subscription has expired. You're now on the Free plan with a 20-document limit. "
+                "Upgrade to track more documents.",
                 "warning"
             )
         
-        return redirect(url_for("home"))
+        # Update tier to free for the rest of the request
+        tier = 'free'
     
+    # Get document count
     doc_count = get_document_count(user_id)
+    
     search_query = request.args.get("q", "").strip()
     status_filter = request.args.get("status", "")
 
@@ -1121,17 +1130,14 @@ def home():
             "icon": icon
         })
 
-    sub_status = get_subscription_status(user_id)
-
     return render_template(
         "index.html", 
         documents=documents, 
         doc_count=doc_count,  
-        subscription_tier=sub_status['tier'],
-        subscription_expiry=sub_status['expiry'],
+        subscription_tier=tier,  # Use the updated tier
+        subscription_expiry=sub_status.get('expiry'),
         now=datetime.now(timezone.utc)
     )
-
 
 @app.route("/health")
 @limiter.exempt
@@ -1948,6 +1954,10 @@ def payment_callback():
         return redirect(url_for("pricing"))
     
     try:
+        # Check if we're in test mode vs live mode
+        # This prevents test mode payments from upgrading users in production
+        is_test_mode = os.environ.get("FLW_TEST_MODE", "false").lower() == "true"
+        
         response = requests.get(
             f'https://api.flutterwave.com/v3/transactions/{transaction_id}/verify',
             headers={
@@ -1961,6 +1971,11 @@ def payment_callback():
             data = response.json()
             
             if data.get('status') == 'success' and data['data']['status'] == 'successful':
+                # Skip test mode transactions in production
+                if data['data'].get('test_mode', False) and not is_test_mode:
+                    flash("Test payments are not allowed in production.", "error")
+                    return redirect(url_for("pricing"))
+                
                 user_id = session['user_id']
                 
                 meta = data['data'].get('meta', {})
@@ -2007,8 +2022,7 @@ def payment_callback():
         traceback.print_exc()
         flash("Error verifying payment. Please contact support.", "error")
         return redirect(url_for("pricing"))
-
-
+    
 @app.route("/payment/cancel")
 def payment_cancel():
     """Handle payment cancellation."""
@@ -2177,6 +2191,33 @@ def newsletter_admin():
     
     # FIXED: Render a simple template instead of missing template
     return render_template("admin/newsletter.html", subscribers=subscribers)
+
+
+# temp function. to be removed
+# Reset a specific user back to free
+import os
+from database import get_db, put_db
+from datetime import datetime, timezone
+
+def reset_user_to_free(email):
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE users 
+            SET subscription_tier = 'free',
+                subscription_status = 'active',
+                subscription_expiry = NULL
+            WHERE email = %s
+        """, (email,))
+        conn.commit()
+        print(f"✅ User {email} reset to Free tier")
+        cursor.close()
+    finally:
+        put_db(conn)
+
+# Call with your email
+reset_user_to_free('your-email@example.com')
 
 # =============================================================================
 # APPLICATION ENTRY POINT
