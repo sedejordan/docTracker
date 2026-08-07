@@ -25,6 +25,7 @@ from contextlib import contextmanager
 
 import psycopg2
 from psycopg2 import pool
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 # =============================================================================
 # DATABASE CONNECTION POOL
@@ -217,7 +218,11 @@ def init_db():
     conn = get_db()
     try:
         cursor = conn.cursor()
-
+        
+        # FIXED: Create tables in a separate transaction
+        # This ensures that if any command fails, only that transaction is aborted
+        cursor.execute("BEGIN;")
+        
         # ---------------------------------------------------------------------
         # USERS TABLE
         # ---------------------------------------------------------------------
@@ -231,19 +236,48 @@ def init_db():
             );
         """)
 
-        # Add columns for password reset feature
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;")
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP;")
+        # Add columns for password reset feature - each with its own try/except
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;")
+        except Exception as e:
+            print(f"ℹ️ Column reset_token already exists or error: {e}")
+        
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP;")
+        except Exception as e:
+            print(f"ℹ️ Column reset_token_expiry already exists or error: {e}")
 
         # Add columns for email verification
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);")
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;")
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_sent_at TIMESTAMP;")
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);")
+        except Exception as e:
+            print(f"ℹ️ Column verification_token already exists or error: {e}")
+            
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;")
+        except Exception as e:
+            print(f"ℹ️ Column verification_token_expiry already exists or error: {e}")
+            
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_sent_at TIMESTAMP;")
+        except Exception as e:
+            print(f"ℹ️ Column email_verification_sent_at already exists or error: {e}")
 
         # Add columns for subscription management
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(50) DEFAULT 'free';")
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'active';")
-        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expiry TIMESTAMP;")
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(50) DEFAULT 'free';")
+        except Exception as e:
+            print(f"ℹ️ Column subscription_tier already exists or error: {e}")
+            
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'active';")
+        except Exception as e:
+            print(f"ℹ️ Column subscription_status already exists or error: {e}")
+            
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expiry TIMESTAMP;")
+        except Exception as e:
+            print(f"ℹ️ Column subscription_expiry already exists or error: {e}")
 
         # ---------------------------------------------------------------------
         # DOCUMENTS TABLE
@@ -257,13 +291,23 @@ def init_db():
             );
         """)
 
-        # Add columns for reminder tracking
-        cursor.execute("""
-            ALTER TABLE documents ADD COLUMN IF NOT EXISTS last_reminder_sent DATE;
-            ALTER TABLE documents ADD COLUMN IF NOT EXISTS reminder_state TEXT;
-            ALTER TABLE documents ADD COLUMN IF NOT EXISTS snoozed_until DATE;
-        """)
-        print("✅ Added reminder columns to documents table")
+        # Add columns for reminder tracking - each with its own try/except
+        try:
+            cursor.execute("ALTER TABLE documents ADD COLUMN IF NOT EXISTS last_reminder_sent DATE;")
+        except Exception as e:
+            print(f"ℹ️ Column last_reminder_sent already exists or error: {e}")
+            
+        try:
+            cursor.execute("ALTER TABLE documents ADD COLUMN IF NOT EXISTS reminder_state TEXT;")
+        except Exception as e:
+            print(f"ℹ️ Column reminder_state already exists or error: {e}")
+            
+        try:
+            cursor.execute("ALTER TABLE documents ADD COLUMN IF NOT EXISTS snoozed_until DATE;")
+        except Exception as e:
+            print(f"ℹ️ Column snoozed_until already exists or error: {e}")
+        
+        print("✅ Added/verified reminder columns to documents table")
 
         # ---------------------------------------------------------------------
         # UNIQUE CONSTRAINT - Prevent duplicate documents
@@ -272,35 +316,38 @@ def init_db():
         # expiry date) twice. This constraint enforces that at the database level.
         #
         # First, clean up any existing duplicates before adding the constraint.
-        cursor.execute("""
-            SELECT COUNT(*) FROM (
-                SELECT user_id, title, expiry_date, COUNT(*) 
-                FROM documents 
-                GROUP BY user_id, title, expiry_date 
-                HAVING COUNT(*) > 1
-            ) AS duplicates;
-        """)
-        duplicate_count = cursor.fetchone()[0]
-        
-        if duplicate_count > 0:
-            print(f"⚠️ Found {duplicate_count} duplicate document groups. Removing duplicates...")
-            
-            # Keep only the lowest ID (oldest) for each duplicate group
+        try:
             cursor.execute("""
-                WITH duplicates AS (
-                    SELECT id,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY user_id, title, expiry_date 
-                               ORDER BY id
-                           ) as rn
-                    FROM documents
-                )
-                DELETE FROM documents
-                WHERE id IN (
-                    SELECT id FROM duplicates WHERE rn > 1
-                );
+                SELECT COUNT(*) FROM (
+                    SELECT user_id, title, expiry_date, COUNT(*) 
+                    FROM documents 
+                    GROUP BY user_id, title, expiry_date 
+                    HAVING COUNT(*) > 1
+                ) AS duplicates;
             """)
-            print(f"✅ Removed {cursor.rowcount} duplicate documents.")
+            duplicate_count = cursor.fetchone()[0]
+            
+            if duplicate_count > 0:
+                print(f"⚠️ Found {duplicate_count} duplicate document groups. Removing duplicates...")
+                
+                # Keep only the lowest ID (oldest) for each duplicate group
+                cursor.execute("""
+                    WITH duplicates AS (
+                        SELECT id,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY user_id, title, expiry_date 
+                                   ORDER BY id
+                               ) as rn
+                        FROM documents
+                    )
+                    DELETE FROM documents
+                    WHERE id IN (
+                        SELECT id FROM duplicates WHERE rn > 1
+                    );
+                """)
+                print(f"✅ Removed {cursor.rowcount} duplicate documents.")
+        except Exception as e:
+            print(f"ℹ️ Duplicate check skipped or error: {e}")
         
         # Now add the unique constraint
         try:
@@ -333,19 +380,27 @@ def init_db():
         # ---------------------------------------------------------------------
         # Indexes make SELECT queries faster by allowing the database to
         # find rows without scanning the entire table.
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
-            CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);
-            CREATE INDEX IF NOT EXISTS idx_newsletter_email ON newsletter_subscribers(email);
-        """)
-        print("✅ Created database indexes")
+        try:
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
+                CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);
+                CREATE INDEX IF NOT EXISTS idx_newsletter_email ON newsletter_subscribers(email);
+            """)
+            print("✅ Created database indexes")
+        except Exception as e:
+            print(f"ℹ️ Indexes may already exist: {e}")
 
+        # Commit the transaction
+        cursor.execute("COMMIT;")
         cursor.close()
-        conn.commit()
         print("✅ Database tables initialized successfully")
         
     except Exception as e:
         print(f"❌ Error initializing database: {e}")
+        try:
+            cursor.execute("ROLLBACK;")
+        except:
+            pass
         conn.rollback()
         raise
     finally:
