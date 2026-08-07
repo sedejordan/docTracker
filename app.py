@@ -2217,7 +2217,7 @@ def reset_user_to_free(email):
         put_db(conn)
 
 # Call with your email
-reset_user_to_free('your-email@example.com')
+reset_user_to_free('sedejordan88@gmail.com')
 
 # =============================================================================
 # APPLICATION ENTRY POINT
