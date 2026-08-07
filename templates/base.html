@@ -59,64 +59,65 @@
     <p class="mt-4 font-display text-sm tracking-wide text-muted">FRITT TRACKER</p>
   </div>
 
-<!-- HEADER: Mobile-first responsive navigation -->
-<header class="bg-white border-b border-line">
-  <div class="max-w-6xl mx-auto px-4 py-4">
-    <!-- Logo row: visible on all screens -->
-    <div class="flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 shrink-0">
-        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
-        <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
-      </a>
-      
-      <!-- Mobile menu toggle (only visible on small screens) -->
-      <button 
-        id="mobile-menu-toggle"
-        class="lg:hidden p-2 rounded-md hover:bg-paper transition-colors focus:outline-none focus:ring-2 focus:ring-fritt"
-        aria-label="Toggle menu"
-      >
+  <!-- HEADER -->
+  <header class="bg-white border-b border-line sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 shrink-0">
+          <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
+          <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
+        </a>
+        
+        <!-- Menu toggle - visible on all screens -->
+        <button 
+          id="menu-toggle"
+          class="p-2 rounded-md hover:bg-paper transition-colors focus:outline-none focus:ring-2 focus:ring-fritt"
+          aria-label="Toggle menu"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="menu-icon-open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            <path id="menu-icon-close" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" class="hidden"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Slide-out menu overlay -->
+  <div id="menu-overlay" class="fixed inset-0 bg-black/50 z-50 hidden" onclick="closeMenu()"></div>
+  
+  <!-- Slide-out menu -->
+  <div id="side-menu" class="fixed top-0 right-0 h-full w-72 bg-white shadow-xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out">
+    <div class="p-6">
+      <!-- Close button -->
+      <button onclick="closeMenu()" class="absolute top-4 right-4 p-2 rounded-md hover:bg-paper transition-colors">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path id="menu-icon-open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          <path id="menu-icon-close" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" class="hidden"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
       </button>
-
-      <!-- Desktop navigation -->
-      <div class="hidden lg:flex items-center gap-3">
-        {% if not session.get("user_id") %}
-          <!-- Logged-out desktop buttons -->
-          <a href="/login" class="px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors">Log In</a>
-          <a href="/register" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">Sign Up Free</a>
+      
+      <!-- Logo in menu -->
+      <div class="flex items-center gap-2 mb-8 pt-4">
+        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
+        <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
+      </div>
+      
+      <!-- Menu items -->
+      <div class="flex flex-col gap-2">
+        {% if session.get("user_id") %}
+          <!-- Logged-in menu items -->
+          <a href="/add" class="block px-4 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-center">+ Add Document</a>
+          <a href="/import-csv" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center">📥 Import CSV</a>
+          <a href="/change-password" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center">Change Password</a>
+          <a href="/logout" class="block px-4 py-3 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors text-center">Logout</a>
         {% else %}
-          <!-- Logged-in desktop buttons -->
-          <a href="/add" class="px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors">+ Add Document</a>
-          <a href="/import-csv" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">📥 Import CSV</a>
-          <a href="/change-password" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Change Password</a>
-          <a href="/logout" class="px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors">Logout</a>
+          <!-- Logged-out menu items -->
+          <a href="/login" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center font-medium">Log In</a>
+          <a href="/register" class="block px-4 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-center">Sign Up Free</a>
         {% endif %}
       </div>
     </div>
-
-    <!-- Mobile navigation menu (hidden on desktop) -->
-    <nav id="main-nav" class="lg:hidden mt-4 border-t pt-4">
-      {% if session.get("user_id") %}
-        <!-- Logged-in mobile navigation items -->
-        <div class="flex flex-col gap-2 w-full">
-          <a href="/add" class="block px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors text-center">+ Add Document</a>
-          <a href="/import-csv" class="block px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors text-center">📥 Import CSV</a>
-          <a href="/change-password" class="block px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors text-center">Change Password</a>
-          <a href="/logout" class="block px-4 py-2 rounded-md border border-line text-sm text-ink hover:bg-paper transition-colors text-center">Logout</a>
-        </div>
-      {% else %}
-        <!-- Logged-out mobile items -->
-        <div class="flex flex-col gap-2 w-full">
-          <a href="/login" class="block px-4 py-2 rounded-md border border-line text-sm font-medium hover:bg-paper transition-colors text-center">Log In</a>
-          <a href="/register" class="block px-4 py-2 rounded-md bg-fritt text-white text-sm font-medium hover:bg-fritt-dark transition-colors text-center">Sign Up Free</a>
-        </div>
-      {% endif %}
-    </nav>
   </div>
-</header>
 
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -147,26 +148,50 @@
 
   <script src="/static/loading.js"></script>
   <script>
-    // Mobile menu toggle
-    document.addEventListener("DOMContentLoaded", function () {
-      const toggle = document.getElementById('mobile-menu-toggle');
-      const nav = document.getElementById('main-nav');
-      const iconOpen = document.getElementById('menu-icon-open');
-      const iconClose = document.getElementById('menu-icon-close');
+    // Menu toggle functions
+    function openMenu() {
+      document.getElementById('menu-overlay').classList.remove('hidden');
+      document.getElementById('side-menu').classList.remove('translate-x-full');
+      document.getElementById('side-menu').classList.add('translate-x-0');
       
-      if (toggle && nav) {
+      // Toggle icon
+      document.getElementById('menu-icon-open').classList.add('hidden');
+      document.getElementById('menu-icon-close').classList.remove('hidden');
+    }
+    
+    function closeMenu() {
+      document.getElementById('menu-overlay').classList.add('hidden');
+      document.getElementById('side-menu').classList.remove('translate-x-0');
+      document.getElementById('side-menu').classList.add('translate-x-full');
+      
+      // Toggle icon
+      document.getElementById('menu-icon-open').classList.remove('hidden');
+      document.getElementById('menu-icon-close').classList.add('hidden');
+    }
+    
+    // Toggle menu on button click
+    document.addEventListener("DOMContentLoaded", function () {
+      const toggle = document.getElementById('menu-toggle');
+      
+      if (toggle) {
         toggle.addEventListener('click', function() {
-          const isOpen = nav.classList.contains('hidden');
-          nav.classList.toggle('hidden');
-          nav.classList.toggle('flex');
+          const menu = document.getElementById('side-menu');
+          const isOpen = !menu.classList.contains('translate-x-full');
           
-          // Toggle icon visibility
-          if (iconOpen && iconClose) {
-            iconOpen.classList.toggle('hidden');
-            iconClose.classList.toggle('hidden');
+          if (isOpen) {
+            closeMenu();
+          } else {
+            openMenu();
           }
         });
       }
+
+      // Close menu on Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeMenu();
+        }
+      });
 
       // Auto-focus the first field
       const first = document.querySelector("[autofocus]");
