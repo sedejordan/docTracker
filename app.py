@@ -1703,6 +1703,17 @@ def import_csv():
     auth = require_verified()
     if auth:
         return auth
+    
+    user_id = session["user_id"]
+    
+    # Check if user is on a paid plan
+    sub_status = get_subscription_status(user_id)
+    tier = sub_status['tier']
+    
+    # Only Pro, VIP, and Business can import CSV
+    if tier not in ['pro', 'vip', 'business']:
+        flash("📥 CSV import is a Pro feature. Upgrade to import multiple documents at once!", "warning")
+        return redirect(url_for("pricing"))
 
     error = None
 

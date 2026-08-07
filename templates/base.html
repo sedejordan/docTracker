@@ -88,35 +88,58 @@
   
   <!-- Slide-out menu -->
   <div id="side-menu" class="fixed top-0 right-0 h-full w-72 bg-white shadow-xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out">
-    <div class="p-6">
-      <!-- Close button -->
-      <button onclick="closeMenu()" class="absolute top-4 right-4 p-2 rounded-md hover:bg-paper transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-      
-      <!-- Logo in menu -->
-      <div class="flex items-center gap-2 mb-8 pt-4">
-        <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
-        <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
+      <div class="p-6">
+          <!-- Close button -->
+          <button onclick="closeMenu()" class="absolute top-4 right-4 p-2 rounded-md hover:bg-paper transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+          </button>
+          
+          <!-- Logo in menu -->
+          <div class="flex items-center gap-2 mb-8 pt-4">
+              <img src="/static/fritt-tracker-logo.svg" alt="" class="w-8 h-8 rounded-md">
+              <span class="font-display font-bold text-xl text-fritt">Fritt Tracker</span>
+          </div>
+          
+          <!-- Menu items -->
+          <div class="flex flex-col gap-2">
+              {% if session.get("user_id") %}
+                  <!-- Logged-in menu items -->
+                  <a href="/add" class="block px-4 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-center">+ Add Document</a>
+                  
+                  <!-- Import CSV - Only show for Pro or VIP users -->
+                  {% if subscription_tier in ['pro', 'vip', 'business'] %}
+                      <a href="/import-csv" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center">📥 Import CSV</a>
+                  {% else %}
+                      <a href="{{ url_for('pricing') }}" 
+                        class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center opacity-60"
+                        onclick="showUpgradeMessage()">
+                          📥 Import CSV <span class="text-xs text-muted">(Pro feature)</span>
+                      </a>
+                  {% endif %}
+                  
+                  <a href="/change-password" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center">Change Password</a>
+                  <a href="/logout" class="block px-4 py-3 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors text-center">Logout</a>
+              {% else %}
+                  <!-- Logged-out menu items -->
+                  <a href="/login" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center font-medium">Log In</a>
+                  <a href="/register" class="block px-4 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-center">Sign Up Free</a>
+              {% endif %}
+          </div>
+          
+          <!-- Show current plan in menu -->
+          {% if session.get("user_id") %}
+              <div class="mt-6 pt-4 border-t border-line">
+                  <p class="text-xs text-muted text-center">
+                      Current plan: <strong>{{ subscription_tier|capitalize }}</strong>
+                      {% if subscription_tier == 'free' %}
+                          <br><a href="{{ url_for('pricing') }}" class="text-fritt hover:underline">Upgrade for more features →</a>
+                      {% endif %}
+                  </p>
+              </div>
+          {% endif %}
       </div>
-      
-      <!-- Menu items -->
-      <div class="flex flex-col gap-2">
-        {% if session.get("user_id") %}
-          <!-- Logged-in menu items -->
-          <a href="/add" class="block px-4 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-center">+ Add Document</a>
-          <a href="/import-csv" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center">📥 Import CSV</a>
-          <a href="/change-password" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center">Change Password</a>
-          <a href="/logout" class="block px-4 py-3 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors text-center">Logout</a>
-        {% else %}
-          <!-- Logged-out menu items -->
-          <a href="/login" class="block px-4 py-3 rounded-md border border-line hover:bg-paper transition-colors text-center font-medium">Log In</a>
-          <a href="/register" class="block px-4 py-3 rounded-md bg-fritt text-white font-medium hover:bg-fritt-dark transition-colors text-center">Sign Up Free</a>
-        {% endif %}
-      </div>
-    </div>
   </div>
 
   <!-- Flash Messages -->

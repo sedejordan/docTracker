@@ -109,6 +109,7 @@
   <table class="w-full text-sm">
     <thead>
       <tr class="border-b border-line text-left text-muted text-xs uppercase tracking-wide">
+        <th class="px-4 py-3 font-medium">#</th>
         <th class="px-4 py-3 font-medium">Title</th>
         <th class="px-4 py-3 font-medium">Expiry Date</th>
         <th class="px-4 py-3 font-medium">Time Left</th>
@@ -119,6 +120,7 @@
     <tbody>
       {% for doc in documents %}
       <tr class="border-b border-line last:border-0">
+        <td class="px-4 py-3 text-muted text-center">{{ loop.index }}</td>
         <td class="px-4 py-3">{{ doc.title }}</td>
         <td class="px-4 py-3 text-muted">{{ doc.expiry_date }}</td>
         <td class="px-4 py-3 text-muted">{{ doc.display_days }}</td>
@@ -139,6 +141,19 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<!-- Document count footer -->
+<div class="mt-4 text-sm text-muted text-center">
+    Showing <strong>{{ documents|length }}</strong> document{% if documents|length != 1 %}s{% endif %}
+    {% if subscription_tier == 'free' %}
+        of <strong>20</strong> on the Free plan
+        {% if doc_count < 20 %}
+            (<strong>{{ 20 - doc_count }}</strong> remaining)
+        {% endif %}
+    {% else %}
+        on your <strong>{{ subscription_tier|capitalize }}</strong> plan
+    {% endif %}
 </div>
 {% else %}
 <div class="bg-white border border-line rounded-xl py-16 text-center text-muted">
