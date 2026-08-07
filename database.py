@@ -75,14 +75,25 @@ def get_db():
     if db_pool is None:
         init_pool()
     try:
-        return db_pool.getconn()
+        conn = db_pool.getconn()
+        # Reset any aborted transaction
+        try:
+            conn.rollback()
+        except:
+            pass
+        return conn
     except Exception as e:
         print(f"Error getting DB connection: {e}")
         # If pool is exhausted, try to close idle connections and retry
         if "pool exhausted" in str(e):
             db_pool.closeall()
             init_pool()
-            return db_pool.getconn()
+            conn = db_pool.getconn()
+            try:
+                conn.rollback()
+            except:
+                pass
+            return conn
         raise
 
 
@@ -104,6 +115,11 @@ def put_db(conn):
             put_db(conn)  # <-- ALWAYS do this
     """
     if db_pool is not None and conn is not None:
+        # Reset any pending transaction before returning to pool
+        try:
+            conn.rollback()
+        except:
+            pass
         db_pool.putconn(conn)
 
 
@@ -125,8 +141,13 @@ def get_connection():
         init_pool()
     conn = db_pool.getconn()
     try:
+        conn.rollback()  # Reset any aborted transaction
         yield conn
     finally:
+        try:
+            conn.rollback()
+        except:
+            pass
         db_pool.putconn(conn)
 
 
@@ -217,6 +238,9 @@ def init_db():
     """
     conn = get_db()
     try:
+        # CRITICAL: Set isolation level to autocommit for initialization
+        # This prevents any transaction from being left open
+        conn.autocommit = True
         cursor = conn.cursor()
         
         # ---------------------------------------------------------------------
@@ -230,11 +254,9 @@ def init_db():
                 email_verified BOOLEAN DEFAULT FALSE
             );
         """)
-        
-        # Commit after table creation
-        conn.commit()
+        print("✅ Created/verified users table")
 
-        # Add columns individually with their own commits
+        # Add columns individually with their own checks
         columns_to_add = [
             ("reset_token", "TEXT"),
             ("reset_token_expiry", "TIMESTAMP"),
@@ -249,15 +271,12 @@ def init_db():
         for col_name, col_type in columns_to_add:
             try:
                 cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type};")
-                conn.commit()
                 print(f"✅ Added column {col_name} to users")
             except Exception as e:
-                # Column might already exist or there's another issue
                 if "already exists" in str(e).lower():
                     print(f"ℹ️ Column {col_name} already exists in users")
                 else:
                     print(f"ℹ️ Could not add column {col_name}: {e}")
-                # Don't re-raise, continue with other columns
 
         # ---------------------------------------------------------------------
         # DOCUMENTS TABLE
@@ -270,7 +289,7 @@ def init_db():
                 user_id INTEGER NOT NULL REFERENCES users(id)
             );
         """)
-        conn.commit()
+        print("✅ Created/verified documents table")
 
         # Add reminder columns individually
         reminder_columns = [
@@ -282,7 +301,6 @@ def init_db():
         for col_name, col_type in reminder_columns:
             try:
                 cursor.execute(f"ALTER TABLE documents ADD COLUMN IF NOT EXISTS {col_name} {col_type};")
-                conn.commit()
                 print(f"✅ Added column {col_name} to documents")
             except Exception as e:
                 if "already exists" in str(e).lower():
@@ -335,18 +353,15 @@ def init_db():
                         );
                     """)
                     print(f"✅ Removed {cursor.rowcount} duplicate documents.")
-                    conn.commit()
                 
                 # Add the unique constraint
                 cursor.execute("""
                     ALTER TABLE documents ADD CONSTRAINT unique_document_for_user 
                     UNIQUE (user_id, title, expiry_date);
                 """)
-                conn.commit()
                 print("✅ Added unique constraint for documents")
             except Exception as e:
                 print(f"⚠️ Could not add unique constraint: {e}")
-                conn.rollback()
         else:
             print("ℹ️ Unique constraint already exists, skipping")
 
@@ -362,7 +377,7 @@ def init_db():
                 is_active BOOLEAN DEFAULT TRUE
             );
         """)
-        conn.commit()
+        print("✅ Created/verified newsletter_subscribers table")
 
         # ---------------------------------------------------------------------
         # INDEXES - Speed up common queries
@@ -376,23 +391,25 @@ def init_db():
         for index_sql in indexes:
             try:
                 cursor.execute(index_sql)
-                conn.commit()
+                print(f"✅ Created index: {index_sql.split('ON')[0].strip()}")
             except Exception as e:
                 print(f"ℹ️ Could not create index: {e}")
-
-        print("✅ Created/verified database indexes")
 
         cursor.close()
         print("✅ Database tables initialized successfully")
         
     except Exception as e:
         print(f"❌ Error initializing database: {e}")
-        conn.rollback()
         # Don't re-raise - we want the app to continue even if DB init fails
         # The error will be logged but the app will still work if tables already exist
     finally:
+        # Reset autocommit before returning to pool
+        try:
+            conn.autocommit = False
+        except:
+            pass
         put_db(conn)  # Always return connection
-        
+
 # =============================================================================
 # USER VERIFICATION FUNCTIONS
 # =============================================================================
