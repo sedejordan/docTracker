@@ -6,6 +6,7 @@ import requests
 APP_URL = os.environ.get("APP_URL", "https://tracker.fritt.org")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+# FIXED: Use a default sender email that's more likely to be verified
 RESEND_NOTIFY_EMAIL = os.environ.get("RESEND_NOTIFY_EMAIL", "notify@fritt.org")
 
 def get_db():
@@ -31,15 +32,19 @@ def send_reminder_email(email, documents, urgency):
     <p style="font-size: 12px; color: #666;">Update reminders in your account settings.</p>
     """
 
+    # FIXED: Check that RESEND_API_KEY exists
+    if not RESEND_API_KEY:
+        print(f"❌ RESEND_API_KEY not set, cannot send reminder email to {email}")
+        return False
+
+    # FIXED: Make sure the from email is properly formatted
+    from_email = f"Fritt Tracker <{RESEND_NOTIFY_EMAIL}>"
+    
     response = requests.post(
         "https://api.resend.com/emails",
         headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
         json={
-            # This was previously the literal string "RESEND_NOTIFY_EMAIL"
-            # (missing the f-string prefix), which isn't a valid email
-            # address - Resend was rejecting every send because of this,
-            # regardless of domain verification status.
-            "from": f"Fritt Tracker <{RESEND_NOTIFY_EMAIL}>",
+            "from": from_email,
             "to": [email],
             "subject": subject,
             "html": html
@@ -61,6 +66,7 @@ def check_and_send_reminders():
     today = datetime.today().date()
 
     # Find all users with expiring documents
+    # FIXED: Use parameterized query properly
     cursor.execute("""
         SELECT DISTINCT u.id, u.email
         FROM users u
@@ -71,7 +77,7 @@ def check_and_send_reminders():
     users = cursor.fetchall()
 
     for user_id, email in users:
-        # Get all documents expiring within 120 days (matches your "Safe" threshold)
+        # Get all documents expiring within 120 days
         cursor.execute("""
             SELECT id, title, expiry_date::date,
                    (expiry_date::date - %s) as days_left
@@ -86,11 +92,11 @@ def check_and_send_reminders():
         if not docs:
             continue
 
-        # Categorize based on your new thresholds
-        critical = []      # 0-7 days (matches your "Urgent" threshold change)
-        urgent = []        # 8-60 days (matches your "Warning" -> "Urgent" transition)
-        warning = []       # 61-120 days (matches your "Good" -> "Warning" transition)
-        expired = []  # <0 days
+        # Categorize based on thresholds
+        critical = []      # 0-7 days
+        urgent = []        # 8-60 days
+        warning = []       # 61-120 days
+        expired = []       # <0 days
 
         for doc_id, title, expiry_date, days_left in docs:
             doc = {

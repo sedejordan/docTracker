@@ -1,0 +1,79 @@
+Folder PATH listing
+Volume serial number is 00000097 920D:54F2
+C:.
+¦   app.py
+¦   database.py
+¦   emails.py
+¦   folder_structure.txt
+¦   migrate_subscriptions.py
+¦   README.md
+¦   reminders.py
+¦   requirements-dev.txt
+¦   requirements.txt
+¦   runtime.txt
+¦   start.sh
+¦   
++---.pytest_cache
+¦   ¦   .gitignore
+¦   ¦   CACHEDIR.TAG
+¦   ¦   README.md
+¦   ¦   
+¦   +---v
+¦       +---cache
+¦               lastfailed
+¦               nodeids
+¦               
++---static
+¦       fritt-logo.svg
+¦       fritt-mark.svg
+¦       fritt-tracker-logo.svg
+¦       loading.js
+¦       template.csv
+¦       
++---templates
+¦   ¦   add.html
+¦   ¦   base.html
+¦   ¦   change_password.html
+¦   ¦   delete_account.html
+¦   ¦   edit.html
+¦   ¦   feedback.html
+¦   ¦   forgot_password.html
+¦   ¦   import_csv.html
+¦   ¦   index.html
+¦   ¦   landing.html
+¦   ¦   login.html
+¦   ¦   pricing.html
+¦   ¦   register.html
+¦   ¦   renewed.html
+¦   ¦   resend_verification.html
+¦   ¦   reset_password.html
+¦   ¦   subscribe.html
+¦   ¦   verify_email.html
+¦   ¦   
+¦   +---errors
+¦   ¦       401.html
+¦   ¦       403.html
+¦   ¦       404.html
+¦   ¦       405.html
+¦   ¦       500.html
+¦   ¦       
+¦   +---legal
+¦           privacy.html
+¦           terms.html
+¦           
++---tests
+¦   ¦   conftest.py
+¦   ¦   test_auth.py
+¦   ¦   test_documents.py
+¦   ¦   test_isolation.py
+¦   ¦   
+¦   +---__pycache__
+¦           conftest.cpython-314-pytest-9.1.1.pyc
+¦           test_auth.cpython-314-pytest-9.1.1.pyc
+¦           test_documents.cpython-314-pytest-9.1.1.pyc
+¦           test_isolation.cpython-314-pytest-9.1.1.pyc
+¦           
++---__pycache__
+        app.cpython-314.pyc
+        database.cpython-314.pyc
+        
