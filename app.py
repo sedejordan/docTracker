@@ -2192,32 +2192,8 @@ def newsletter_admin():
     # FIXED: Render a simple template instead of missing template
     return render_template("admin/newsletter.html", subscribers=subscribers)
 
-
-# temp function. to be removed
-# Reset a specific user back to free
-import os
-from database import get_db, put_db
-from datetime import datetime, timezone
-
-def reset_user_to_free(email):
-    conn = get_db()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE users 
-            SET subscription_tier = 'free',
-                subscription_status = 'active',
-                subscription_expiry = NULL
-            WHERE email = %s
-        """, (email,))
-        conn.commit()
-        print(f"✅ User {email} reset to Free tier")
-        cursor.close()
-    finally:
-        put_db(conn)
-
-# Call with your email
-reset_user_to_free('sedejordan88@gmail.com')
+# # Call with your email
+# reset_user_to_free('sedejordan88@gmail.com')
 
 # =============================================================================
 # APPLICATION ENTRY POINT
