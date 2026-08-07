@@ -50,7 +50,7 @@
             </div>
             
             <form action="{{ url_for('initiate_payment') }}" method="POST" id="payment-form">
-                {{ csrf_token() }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="plan_id" value="{{ plan_id }}">
                 <input type="hidden" name="plan_type" value="{{ plan_type }}">
                 

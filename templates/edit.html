@@ -9,7 +9,7 @@
   {% endif %}
 
   <form method="POST" class="space-y-4">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
       <label for="title" class="block text-sm font-medium mb-1">Title</label>
       <!-- doc.title / doc.expiry_date - get_owned_document() returns a

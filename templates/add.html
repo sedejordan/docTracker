@@ -16,7 +16,7 @@
   <!-- enctype="multipart/form-data" is only needed for file uploads.
        Add it back to the <form> tag above when uploads are re-enabled. -->
   <form method="POST" class="space-y-4">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
       <label for="title" class="block text-sm font-medium mb-1">Title</label>
       <input type="text" id="title" name="title" placeholder="e.g. Passport, License, Contract" autofocus

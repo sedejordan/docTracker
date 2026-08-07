@@ -17,7 +17,7 @@
   {% endif %}
 
   <form method="POST" class="space-y-4">
-    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
       <label for="email" class="block text-sm font-medium mb-1">Email</label>
       <input
