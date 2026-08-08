@@ -22,10 +22,12 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from contextlib import contextmanager
+import time
 
 import psycopg2
 from psycopg2 import pool
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2 import OperationalError, InterfaceError
 
 # =============================================================================
 # DATABASE CONNECTION POOL
@@ -55,12 +57,117 @@ def init_pool():
         print(f"✅ Database connection pool initialized (max 5 connections)")
 
 # =============================================================================
+# CONNECTION HEALTH CHECK
+# =============================================================================
+
+def _is_connection_alive(conn):
+    """
+    Check if a database connection is still alive.
+    
+    Returns True if the connection is valid, False if it's dead.
+    This prevents handing out stale connections that have been closed
+    by the database server (e.g., after Render PostgreSQL hibernates).
+    """
+    if conn is None:
+        return False
+    try:
+        # Try a simple query to test the connection
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        cursor.close()
+        return True
+    except Exception as e:
+        # Any exception means the connection is dead
+        print(f"⚠️ Connection health check failed: {e}")
+        try:
+            conn.close()
+        except:
+            pass
+        return False
+
+def _get_valid_connection(max_attempts=3, delay=0.5):
+    """
+    Get a valid connection from the pool with retry logic.
+    
+    Args:
+        max_attempts: Maximum number of connection attempts
+        delay: Seconds to wait between attempts (exponential backoff)
+    
+    Returns:
+        A valid database connection
+    
+    Raises:
+        Exception: If unable to get a valid connection after max_attempts
+    """
+    if db_pool is None:
+        init_pool()
+    
+    last_error = None
+    
+    for attempt in range(max_attempts):
+        try:
+            # Get a connection from the pool
+            conn = db_pool.getconn()
+            
+            # Reset any aborted transaction
+            try:
+                conn.rollback()
+            except:
+                pass
+            
+            # Health check - ensure connection is alive
+            if _is_connection_alive(conn):
+                return conn
+            else:
+                # Connection is dead - discard it
+                print(f"⚠️ Got dead connection from pool, attempt {attempt + 1}/{max_attempts}")
+                try:
+                    db_pool.putconn(conn, close=True)  # Close it permanently
+                except:
+                    pass
+                
+                # If the pool is exhausted, reset it
+                if attempt < max_attempts - 1:
+                    time.sleep(delay * (attempt + 1))  # Exponential backoff
+                    if attempt == max_attempts - 2:
+                        # On last retry, try resetting the pool
+                        try:
+                            db_pool.closeall()
+                            init_pool()
+                            print("🔄 Reset connection pool")
+                        except:
+                            pass
+                continue
+                
+        except Exception as e:
+            last_error = e
+            print(f"⚠️ Error getting DB connection (attempt {attempt + 1}/{max_attempts}): {e}")
+            
+            if attempt < max_attempts - 1:
+                time.sleep(delay * (attempt + 1))
+                # Try to reset the pool if we're getting errors
+                try:
+                    db_pool.closeall()
+                    init_pool()
+                    print("🔄 Reset connection pool")
+                except:
+                    pass
+            continue
+    
+    # If we get here, all attempts failed
+    error_msg = f"Failed to get a valid database connection after {max_attempts} attempts"
+    if last_error:
+        error_msg += f": {last_error}"
+    raise Exception(error_msg)
+
+# =============================================================================
 # CONNECTION MANAGEMENT
 # =============================================================================
 
 def get_db():
     """
-    Get a connection from the pool.
+    Get a validated connection from the pool.
     
     Usage:
         conn = get_db()
@@ -70,31 +177,13 @@ def get_db():
         finally:
             put_db(conn)  # ALWAYS return the connection!
     
-    If the pool is exhausted, it will close idle connections and retry.
+    This function automatically:
+    - Checks if the connection is alive
+    - Retries with exponential backoff if the pool is exhausted
+    - Replaces dead connections with fresh ones
+    - Handles Render PostgreSQL hibernation gracefully
     """
-    if db_pool is None:
-        init_pool()
-    try:
-        conn = db_pool.getconn()
-        # Reset any aborted transaction
-        try:
-            conn.rollback()
-        except:
-            pass
-        return conn
-    except Exception as e:
-        print(f"Error getting DB connection: {e}")
-        # If pool is exhausted, try to close idle connections and retry
-        if "pool exhausted" in str(e):
-            db_pool.closeall()
-            init_pool()
-            conn = db_pool.getconn()
-            try:
-                conn.rollback()
-            except:
-                pass
-            return conn
-        raise
+    return _get_valid_connection()
 
 
 def put_db(conn):
@@ -126,7 +215,7 @@ def put_db(conn):
 @contextmanager
 def get_connection():
     """
-    Get a connection from the pool with context manager.
+    Get a validated connection from the pool with context manager.
     
     Usage:
         with get_connection() as conn:
@@ -137,18 +226,15 @@ def get_connection():
     This is the recommended way to use connections - it guarantees
     the connection is always returned, even if an exception occurs.
     """
-    if db_pool is None:
-        init_pool()
-    conn = db_pool.getconn()
+    conn = get_db()  # Now uses the retry logic
     try:
-        conn.rollback()  # Reset any aborted transaction
         yield conn
     finally:
         try:
             conn.rollback()
         except:
             pass
-        db_pool.putconn(conn)
+        put_db(conn)
 
 
 @contextmanager
@@ -165,14 +251,14 @@ def get_db_cursor():
     
     This is the most convenient way to use the database.
     It handles:
-    - Getting a connection
+    - Getting a connection with retry logic
     - Creating a cursor
     - Committing on success
     - Rolling back on error
     - Closing the cursor
     - Returning the connection
     """
-    conn = get_db()
+    conn = get_db()  # Now uses the retry logic
     try:
         cursor = conn.cursor()
         yield cursor
@@ -199,7 +285,7 @@ def get_db_cursor_manual():
     Use this when you need direct access to the connection object
     (e.g., for transactions that need to be committed at a specific time).
     """
-    conn = get_db()
+    conn = get_db()  # Now uses the retry logic
     try:
         cursor = conn.cursor()
         yield conn, cursor
