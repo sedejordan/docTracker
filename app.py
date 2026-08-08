@@ -2051,6 +2051,10 @@ def payment_cancel():
 @app.route("/webhook/flutterwave", methods=["POST"])
 def flutterwave_webhook():
     """Handle Flutterwave webhook for subscription events."""
+    #*********
+    if request.method == "GET":
+        return "Webhook endpoint is ready", 200
+    #************
     try:
         data = request.json
         
@@ -2137,7 +2141,9 @@ def flutterwave_webhook():
         import traceback
         traceback.print_exc()
         return "OK", 200
-
+    #*********
+    return "OK", 200
+    #**********
 
 @app.route("/cron/reminders")
 def run_reminders():
