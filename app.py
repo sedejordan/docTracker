@@ -2049,6 +2049,7 @@ def payment_cancel():
 # =============================================================================
 
 @app.route("/webhook/flutterwave", methods=["POST"])
+@csrf.exempt 
 def flutterwave_webhook():
     """Handle Flutterwave webhook for subscription events."""
     #*********
